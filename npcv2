@@ -1,5 +1,5 @@
 --// Ultimate Zombie Aimlock Script //--
---// Features: Aimlock, FOV Control, Wall Check, ESP, Hitbox Expansion //--
+--// Features: View-Based Priority Aimlock, FOV Control, Wall Check, ESP, Hitbox Expansion //--
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -288,29 +288,11 @@ zombiesFolder.ChildAdded:Connect(function(child)
 end)
 
 ----------------------------------------------------------------
--- AIMBOT FUNCTIONS
+-- IMPROVED AIMBOT WITH VIEW-BASED PRIORITY
 ----------------------------------------------------------------
-local raycastParams = RaycastParams.new()
-raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-raycastParams.IgnoreWater = true
-
-local function isVisible(targetPart)
-    if not wallCheckEnabled then return true end
-    
-    local origin = camera.CFrame.Position
-    local direction = (targetPart.Position - origin).Unit * 500
-    raycastParams.FilterDescendantsInstances = {player.Character, camera}
-    
-    local result = workspace:Raycast(origin, direction, raycastParams)
-    return result and result.Instance and targetPart:IsDescendantOf(result.Instance:FindFirstAncestorOfClass("Model"))
-end
-
-local function getClosestZombieInFOV()
-    local closestZombie = nil
-    local closestDist = aimFOV
-    local closestActualDist = math.huge
-    
-    local cameraPos = camera.CFrame.Position
+local function getBestTarget()
+    local bestTarget = nil
+    local smallestAngle = math.rad(aimFOV)
     local screenCenter = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
     
     for _, zombie in ipairs(zombiesFolder:GetChildren()) do
@@ -318,16 +300,29 @@ local function getClosestZombieInFOV()
             local part = zombie:FindFirstChild(aimPartName)
             if part then
                 local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
+                
                 if onScreen then
-                    local screenDist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
-                    local actualDist = (part.Position - cameraPos).Magnitude
+                    local screenDiff = Vector2.new(screenPos.X, screenPos.Y) - screenCenter
+                    local angle = math.atan2(screenDiff.Y, screenDiff.X)
+                    local angleMagnitude = math.abs(angle)
                     
-                    if screenDist < closestDist or (screenDist <= aimFOV and actualDist < closestActualDist) then
-                        local visible = isVisible(part)
-                        if visible and (screenDist < closestDist or actualDist < closestActualDist) then
-                            closestDist = screenDist
-                            closestActualDist = actualDist
-                            closestZombie = zombie
+                    if angleMagnitude < smallestAngle then
+                        local visible = true
+                        if wallCheckEnabled then
+                            local origin = camera.CFrame.Position
+                            local direction = (part.Position - origin).Unit * 500
+                            local raycastParams = RaycastParams.new()
+                            raycastParams.FilterDescendantsInstances = {player.Character, camera}
+                            raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+                            raycastParams.IgnoreWater = true
+                            
+                            local result = workspace:Raycast(origin, direction, raycastParams)
+                            visible = result and result.Instance and part:IsDescendantOf(result.Instance:FindFirstAncestorOfClass("Model"))
+                        end
+                        
+                        if visible then
+                            smallestAngle = angleMagnitude
+                            bestTarget = zombie
                         end
                     end
                 end
@@ -335,40 +330,23 @@ local function getClosestZombieInFOV()
         end
     end
     
-    return closestZombie
+    return bestTarget
 end
 
 ----------------------------------------------------------------
--- HITBOX FUNCTIONS (Fixed to work on all zombies)
+-- HITBOX FUNCTIONS (Original 5x5x5 size)
 ----------------------------------------------------------------
 local function expandHeadHitbox(zombie)
     if zombie:IsA("Model") and zombie:FindFirstChild("Head") then
         local head = zombie.Head
         if head:IsA("BasePart") then
-            -- Store original values if not already stored
             if not head:FindFirstChild("OriginalSize") then
                 local originalSize = Instance.new("Vector3Value")
                 originalSize.Name = "OriginalSize"
                 originalSize.Value = head.Size
                 originalSize.Parent = head
-                
-                local originalTransparency = Instance.new("NumberValue")
-                originalTransparency.Name = "OriginalTransparency"
-                originalTransparency.Value = head.Transparency
-                originalTransparency.Parent = head
-                
-                local originalMaterial = Instance.new("StringValue")
-                originalMaterial.Name = "OriginalMaterial"
-                originalMaterial.Value = tostring(head.Material)
-                originalMaterial.Parent = head
-                
-                local originalCanCollide = Instance.new("BoolValue")
-                originalCanCollide.Name = "OriginalCanCollide"
-                originalCanCollide.Value = head.CanCollide
-                originalCanCollide.Parent = head
             end
             
-            -- Apply expanded hitbox (original 5x5x5 size you wanted)
             head.Size = Vector3.new(5, 5, 5)
             head.Transparency = 0.5
             head.CanCollide = false
@@ -381,24 +359,17 @@ local function resetHeadHitbox(zombie)
     if zombie:IsA("Model") and zombie:FindFirstChild("Head") then
         local head = zombie.Head
         if head:IsA("BasePart") then
-            -- Restore original values if they exist
             if head:FindFirstChild("OriginalSize") then
                 head.Size = head.OriginalSize.Value
-                head.Transparency = head.OriginalTransparency.Value
-                head.Material = Enum.Material[head.OriginalMaterial.Value]
-                head.CanCollide = head.OriginalCanCollide.Value
-                
-                -- Clean up stored values
+                head.Transparency = 0
+                head.CanCollide = true
+                head.Material = Enum.Material.Plastic
                 head.OriginalSize:Destroy()
-                head.OriginalTransparency:Destroy()
-                head.OriginalMaterial:Destroy()
-                head.OriginalCanCollide:Destroy()
             else
-                -- Fallback to default values
                 head.Size = Vector3.new(1, 1, 1)
                 head.Transparency = 0
-                head.Material = Enum.Material.Plastic
                 head.CanCollide = true
+                head.Material = Enum.Material.Plastic
             end
         end
     end
@@ -414,15 +385,14 @@ local function updateAllZombies()
     end
 end
 
--- Handle new zombies that spawn
 zombiesFolder.ChildAdded:Connect(function(zombie)
-    task.wait(0.2) -- Small delay to ensure zombie is fully loaded
+    task.wait(0.2)
     if hitboxEnabled then
         expandHeadHitbox(zombie)
     end
 end)
 
--- Initialize hitboxes based on current state
+-- Initialize hitboxes
 updateAllZombies()
 
 ----------------------------------------------------------------
@@ -447,11 +417,11 @@ RunService.RenderStepped:Connect(function()
     -- Update FOV circle position
     fovCircle.Position = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
     
-    -- Aimlock logic
+    -- Improved aimlock logic
     if aimLockActive then
-        local closestZombie = getClosestZombieInFOV()
-        if closestZombie then
-            local targetPart = closestZombie[aimPartName]
+        local targetZombie = getBestTarget()
+        if targetZombie then
+            local targetPart = targetZombie[aimPartName]
             if targetPart then
                 camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
             end
