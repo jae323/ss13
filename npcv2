@@ -25,7 +25,7 @@ local hitboxEnabled = false
 local espObjects = {}
 
 ----------------------------------------------------------------
--- FOV CIRCLE SYSTEM (Increased size)
+-- FOV CIRCLE SYSTEM
 ----------------------------------------------------------------
 local fovCircle = Drawing.new("Circle")
 fovCircle.Visible = fovVisible
@@ -265,7 +265,7 @@ toggleUIBtn.MouseButton1Click:Connect(function()
 end)
 
 ----------------------------------------------------------------
--- ESP FUNCTIONS (Now shows zombie names)
+-- ESP FUNCTIONS (With zombie names)
 ----------------------------------------------------------------
 local function clearESP()
     for _, v in pairs(espObjects) do
@@ -377,42 +377,60 @@ local function getClosestZombieInFOV()
 end
 
 ----------------------------------------------------------------
--- HITBOX FUNCTIONS (Original 5x5x5 size)
+-- HITBOX FUNCTIONS (Modified to make all parts except head invisible)
 ----------------------------------------------------------------
 local function expandHeadHitbox(zombie)
-    if zombie:IsA("Model") and zombie:FindFirstChild("Head") then
-        local head = zombie.Head
-        if head:IsA("BasePart") then
-            if not head:FindFirstChild("OriginalSize") then
-                local originalSize = Instance.new("Vector3Value")
-                originalSize.Name = "OriginalSize"
-                originalSize.Value = head.Size
-                originalSize.Parent = head
+    if zombie:IsA("Model") then
+        -- Make all parts invisible except head
+        for _, part in ipairs(zombie:GetDescendants()) do
+            if part:IsA("BasePart") then
+                if part.Name == "Head" then
+                    if not part:FindFirstChild("OriginalTransparency") then
+                        local originalTransparency = Instance.new("NumberValue")
+                        originalTransparency.Name = "OriginalTransparency"
+                        originalTransparency.Value = part.Transparency
+                        originalTransparency.Parent = part
+                    end
+                    part.Transparency = 0.5
+                    part.Material = Enum.Material.ForceField
+                    
+                    -- Still expand head hitbox
+                    if not part:FindFirstChild("OriginalSize") then
+                        local originalSize = Instance.new("Vector3Value")
+                        originalSize.Name = "OriginalSize"
+                        originalSize.Value = part.Size
+                        originalSize.Parent = part
+                    end
+                    part.Size = Vector3.new(5, 5, 5)
+                    part.CanCollide = false
+                else
+                    if not part:FindFirstChild("OriginalTransparency") then
+                        local originalTransparency = Instance.new("NumberValue")
+                        originalTransparency.Name = "OriginalTransparency"
+                        originalTransparency.Value = part.Transparency
+                        originalTransparency.Parent = part
+                    end
+                    part.Transparency = 1  -- Make completely invisible
+                end
             end
-            
-            head.Size = Vector3.new(5, 5, 5)
-            head.Transparency = 0.5
-            head.CanCollide = false
-            head.Material = Enum.Material.ForceField
         end
     end
 end
 
 local function resetHeadHitbox(zombie)
-    if zombie:IsA("Model") and zombie:FindFirstChild("Head") then
-        local head = zombie.Head
-        if head:IsA("BasePart") then
-            if head:FindFirstChild("OriginalSize") then
-                head.Size = head.OriginalSize.Value
-                head.Transparency = 0
-                head.CanCollide = true
-                head.Material = Enum.Material.Plastic
-                head.OriginalSize:Destroy()
-            else
-                head.Size = Vector3.new(1, 1, 1)
-                head.Transparency = 0
-                head.CanCollide = true
-                head.Material = Enum.Material.Plastic
+    if zombie:IsA("Model") then
+        -- Restore all parts
+        for _, part in ipairs(zombie:GetDescendants()) do
+            if part:IsA("BasePart") and part:FindFirstChild("OriginalTransparency") then
+                part.Transparency = part.OriginalTransparency.Value
+                part.Material = Enum.Material.Plastic
+                part.OriginalTransparency:Destroy()
+                
+                if part.Name == "Head" and part:FindFirstChild("OriginalSize") then
+                    part.Size = part.OriginalSize.Value
+                    part.CanCollide = true
+                    part.OriginalSize:Destroy()
+                end
             end
         end
     end
@@ -439,7 +457,7 @@ end)
 updateAllZombies()
 
 ----------------------------------------------------------------
--- MAIN LOOP (With Fixed FOV System)
+-- MAIN LOOP
 ----------------------------------------------------------------
 RunService.RenderStepped:Connect(function()
     -- Handle FOV slider dragging
