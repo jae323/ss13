@@ -1,5 +1,5 @@
---// Ultimate Zombie Aimlock Script //--
---// Features: View-Based Priority Aimlock, FOV Control, Wall Check, ESP, Hitbox Expansion //--
+--// Ultimate Zombie Aimlock Script (Combined Version) //--
+--// Features: View-Based Priority + Nearest Target, Fast Aim, FOV Control //--
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -288,40 +288,49 @@ zombiesFolder.ChildAdded:Connect(function(child)
 end)
 
 ----------------------------------------------------------------
--- IMPROVED AIMBOT WITH VIEW-BASED PRIORITY
+-- COMBINED AIMBOT LOGIC (View-Based + Distance Priority)
 ----------------------------------------------------------------
-local function getBestTarget()
+local function getOptimalTarget()
     local bestTarget = nil
-    local smallestAngle = math.rad(aimFOV)
+    local bestScore = math.huge
     local screenCenter = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
     
     for _, zombie in ipairs(zombiesFolder:GetChildren()) do
         if zombie:IsA("Model") then
             local part = zombie:FindFirstChild(aimPartName)
             if part then
+                -- Get screen position and check visibility
                 local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
                 
                 if onScreen then
-                    local screenDiff = Vector2.new(screenPos.X, screenPos.Y) - screenCenter
-                    local angle = math.atan2(screenDiff.Y, screenDiff.X)
-                    local angleMagnitude = math.abs(angle)
+                    -- Calculate both angle and distance factors
+                    local screenVector = Vector2.new(screenPos.X, screenPos.Y) - screenCenter
+                    local angleScore = screenVector.Magnitude  -- Distance from screen center
+                    local distanceScore = (part.Position - camera.CFrame.Position).Magnitude
                     
-                    if angleMagnitude < smallestAngle then
+                    -- Combined score (60% angle, 40% distance)
+                    local combinedScore = (angleScore * 0.6) + (distanceScore * 0.4)
+                    
+                    -- Check if within FOV and better than current target
+                    if angleScore <= aimFOV and combinedScore < bestScore then
+                        -- Wall check if enabled
                         local visible = true
                         if wallCheckEnabled then
-                            local origin = camera.CFrame.Position
-                            local direction = (part.Position - origin).Unit * 500
                             local raycastParams = RaycastParams.new()
                             raycastParams.FilterDescendantsInstances = {player.Character, camera}
                             raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
                             raycastParams.IgnoreWater = true
                             
-                            local result = workspace:Raycast(origin, direction, raycastParams)
+                            local result = workspace:Raycast(
+                                camera.CFrame.Position,
+                                (part.Position - camera.CFrame.Position).Unit * 500,
+                                raycastParams
+                            )
                             visible = result and result.Instance and part:IsDescendantOf(result.Instance:FindFirstAncestorOfClass("Model"))
                         end
                         
                         if visible then
-                            smallestAngle = angleMagnitude
+                            bestScore = combinedScore
                             bestTarget = zombie
                         end
                     end
@@ -396,7 +405,7 @@ end)
 updateAllZombies()
 
 ----------------------------------------------------------------
--- MAIN LOOP
+-- MAIN LOOP (Optimized for Fast Aim)
 ----------------------------------------------------------------
 RunService.RenderStepped:Connect(function()
     -- Update FOV slider
@@ -417,12 +426,13 @@ RunService.RenderStepped:Connect(function()
     -- Update FOV circle position
     fovCircle.Position = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
     
-    -- Improved aimlock logic
+    -- Fast aimlock logic
     if aimLockActive then
-        local targetZombie = getBestTarget()
+        local targetZombie = getOptimalTarget()
         if targetZombie then
             local targetPart = targetZombie[aimPartName]
             if targetPart then
+                -- Direct camera focus for instant aiming
                 camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
             end
         end
