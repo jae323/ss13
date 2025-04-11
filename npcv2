@@ -25,7 +25,7 @@ local hitboxEnabled = false
 local espObjects = {}
 
 ----------------------------------------------------------------
--- FIXED FOV CIRCLE SYSTEM
+-- MODIFIED FOV CIRCLE SYSTEM (same functionality, different visual)
 ----------------------------------------------------------------
 local fovCircle = Drawing.new("Circle")
 fovCircle.Visible = fovVisible
@@ -34,6 +34,7 @@ fovCircle.Thickness = 2
 fovCircle.NumSides = 64
 fovCircle.Radius = aimFOV
 fovCircle.Filled = false
+fovCircle.Transparency = 0.5  -- Changed transparency for different visual effect
 
 local function updateFOVCircle()
     fovCircle.Radius = aimFOV
