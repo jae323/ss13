@@ -1,4 +1,4 @@
---// Ultimate Zombie Aimlock Script //--
+//--
 --// Features: Fixed FOV System, Aimlock, ESP, Wall Check, Hitbox Expansion //--
 
 local Players = game:GetService("Players")
@@ -25,7 +25,7 @@ local hitboxEnabled = false
 local espObjects = {}
 
 ----------------------------------------------------------------
--- MODIFIED FOV CIRCLE SYSTEM (same functionality, different visual)
+-- FIXED FOV CIRCLE SYSTEM
 ----------------------------------------------------------------
 local fovCircle = Drawing.new("Circle")
 fovCircle.Visible = fovVisible
@@ -34,7 +34,6 @@ fovCircle.Thickness = 2
 fovCircle.NumSides = 64
 fovCircle.Radius = aimFOV
 fovCircle.Filled = false
-fovCircle.Transparency = 0.5  -- Changed transparency for different visual effect
 
 local function updateFOVCircle()
     fovCircle.Radius = aimFOV
