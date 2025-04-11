@@ -13,7 +13,7 @@ local zombiesFolder = workspace:WaitForChild("Zombies")
 
 -- State
 local aimLockActive = false
-local aimFOV = 100
+local aimFOV = 150  -- Increased default FOV from 100 to 150
 local draggingSlider = false
 local uiVisible = true
 local fovVisible = true
@@ -25,7 +25,7 @@ local hitboxEnabled = false
 local espObjects = {}
 
 ----------------------------------------------------------------
--- ORIGINAL FOV CIRCLE SYSTEM (Restored)
+-- FOV CIRCLE SYSTEM (Increased size)
 ----------------------------------------------------------------
 local fovCircle = Drawing.new("Circle")
 fovCircle.Visible = fovVisible
@@ -265,7 +265,7 @@ toggleUIBtn.MouseButton1Click:Connect(function()
 end)
 
 ----------------------------------------------------------------
--- ESP FUNCTIONS
+-- ESP FUNCTIONS (Now shows zombie names)
 ----------------------------------------------------------------
 local function clearESP()
     for _, v in pairs(espObjects) do
@@ -278,6 +278,7 @@ end
 
 local function createESP(zombie)
     if zombie:IsA("Model") and not zombie:FindFirstChild("ESP_Highlight") then
+        -- Create highlight
         local highlight = Instance.new("Highlight")
         highlight.Name = "ESP_Highlight"
         highlight.Adornee = zombie
@@ -286,7 +287,29 @@ local function createESP(zombie)
         highlight.FillTransparency = 0.7
         highlight.OutlineTransparency = 0
         highlight.Parent = zombie
+        
+        -- Create name label
+        local nameLabel = Instance.new("BillboardGui")
+        nameLabel.Name = "ESP_Name"
+        nameLabel.Adornee = zombie:FindFirstChild("Head") or zombie:FindFirstChild("HumanoidRootPart")
+        nameLabel.Size = UDim2.new(0, 200, 0, 50)
+        nameLabel.StudsOffset = Vector3.new(0, 2, 0)
+        nameLabel.AlwaysOnTop = true
+        nameLabel.Parent = zombie
+        
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Text = zombie.Name
+        textLabel.TextColor3 = Color3.new(1, 1, 1)
+        textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+        textLabel.TextStrokeTransparency = 0
+        textLabel.TextSize = 14
+        textLabel.Font = Enum.Font.GothamBold
+        textLabel.Parent = nameLabel
+        
         table.insert(espObjects, highlight)
+        table.insert(espObjects, nameLabel)
     end
 end
 
@@ -307,7 +330,7 @@ zombiesFolder.ChildAdded:Connect(function(child)
 end)
 
 ----------------------------------------------------------------
--- AIMBOT FUNCTIONS (With Fixed FOV and Wall Check)
+-- AIMBOT FUNCTIONS (With Fixed FOV)
 ----------------------------------------------------------------
 local function getClosestZombieInFOV()
     local closestZombie = nil
