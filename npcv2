@@ -1,4 +1,4 @@
-//--
+--// Ultimate Zombie Aimlock Script //--
 --// Features: Fixed FOV System, Aimlock, ESP, Wall Check, Hitbox Expansion //--
 
 local Players = game:GetService("Players")
@@ -25,7 +25,7 @@ local hitboxEnabled = false
 local espObjects = {}
 
 ----------------------------------------------------------------
--- FIXED FOV CIRCLE SYSTEM
+-- ORIGINAL FOV CIRCLE SYSTEM (Restored)
 ----------------------------------------------------------------
 local fovCircle = Drawing.new("Circle")
 fovCircle.Visible = fovVisible
@@ -307,7 +307,7 @@ zombiesFolder.ChildAdded:Connect(function(child)
 end)
 
 ----------------------------------------------------------------
--- AIMBOT FUNCTIONS (With Fixed FOV)
+-- AIMBOT FUNCTIONS (With Fixed FOV and Wall Check)
 ----------------------------------------------------------------
 local function getClosestZombieInFOV()
     local closestZombie = nil
@@ -333,12 +333,11 @@ local function getClosestZombieInFOV()
                             raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
                             raycastParams.IgnoreWater = true
                             
-                            local result = workspace:Raycast(
-                                camera.CFrame.Position,
-                                (part.Position - camera.CFrame.Position).Unit * 500,
-                                raycastParams
-                            )
-                            visible = result and result.Instance and part:IsDescendantOf(result.Instance:FindFirstAncestorOfClass("Model"))
+                            local rayOrigin = camera.CFrame.Position
+                            local rayDirection = (part.Position - rayOrigin).Unit * (worldDistance + 5)
+                            
+                            local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+                            visible = not result or result.Instance:IsDescendantOf(zombie)
                         end
                         
                         if visible then
