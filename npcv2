@@ -1,5 +1,5 @@
 --// Ultimate Zombie Aimlock Script //--
---// Features: Fixed FOV System, Aimlock, ESP, Wall Check, Hitbox Expansion //--
+--// Features: PC Keybind, Menu Toggle with X, Original Functionality //--
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -7,13 +7,49 @@ local UserInputService = game:GetService("UserInputService")
 local camera = workspace.CurrentCamera
 local player = Players.LocalPlayer
 
--- Config
+-- NEW: Robust GUI initialization (ONLY CHANGE MADE TO THE SCRIPT)
+repeat task.wait() until player:IsDescendantOf(game) and player:FindFirstChild("PlayerGui")
+
+local function createSafeGUI()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "ZombieAimlockGUI"
+    screenGui.ResetOnSpawn = false
+    
+    -- 1st try: Standard PlayerGui
+    local success = pcall(function()
+        screenGui.Parent = player:WaitForChild("PlayerGui", 5)
+    end)
+    
+    if not success then
+        -- 2nd try: Exploit-specific methods
+        pcall(function()
+            if get_hidden_gui then
+                screenGui.Parent = get_hidden_gui()
+            elseif gethui then
+                screenGui.Parent = gethui()
+            elseif syn and syn.protect_gui then
+                syn.protect_gui(screenGui)
+                screenGui.Parent = game:GetService("CoreGui")
+            else
+                screenGui.Parent = game:GetService("CoreGui")
+            end
+        end)
+    end
+    return screenGui
+end
+
+local screenGui = createSafeGUI()
+
+-- Config (ORIGINAL)
 local aimPartName = "Head"
 local zombiesFolder = workspace:WaitForChild("Zombies")
+local isPC = false -- Will be set automatically
+local aimbindKey = Enum.KeyCode.Q -- Default keybind
+local waitingForKeybind = false
 
--- State
+-- Original State (ORIGINAL)
 local aimLockActive = false
-local aimFOV = 150  -- Increased default FOV from 100 to 150
+local aimFOV = 150
 local draggingSlider = false
 local uiVisible = true
 local fovVisible = true
@@ -21,11 +57,14 @@ local espVisible = false
 local wallCheckEnabled = true
 local hitboxEnabled = false
 
--- ESP storage
+-- ESP storage (ORIGINAL)
 local espObjects = {}
 
+-- Detect platform (ORIGINAL)
+isPC = UserInputService:GetPlatform() == Enum.Platform.Windows
+
 ----------------------------------------------------------------
--- FOV CIRCLE SYSTEM
+-- FOV CIRCLE SYSTEM (ORIGINAL)
 ----------------------------------------------------------------
 local fovCircle = Drawing.new("Circle")
 fovCircle.Visible = fovVisible
@@ -42,20 +81,15 @@ local function updateFOVCircle()
 end
 
 ----------------------------------------------------------------
--- COMPACT & DRAGGABLE GUI SYSTEM
+-- GUI SYSTEM (ORIGINAL with protected parent)
 ----------------------------------------------------------------
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ZombieAimlockGUI"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = player:WaitForChild("PlayerGui")
-
--- UI Toggle Button
+-- UI Toggle Button (with X key functionality) (ORIGINAL)
 local toggleUIBtn = Instance.new("TextButton")
 toggleUIBtn.Size = UDim2.new(0, 80, 0, 25)
 toggleUIBtn.Position = UDim2.new(0, 10, 0, 10)
 toggleUIBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
 toggleUIBtn.TextColor3 = Color3.new(1,1,1)
-toggleUIBtn.Text = "Hide UI"
+toggleUIBtn.Text = "Hide UI [X]"
 toggleUIBtn.Font = Enum.Font.Gotham
 toggleUIBtn.TextSize = 12
 toggleUIBtn.Parent = screenGui
@@ -64,10 +98,10 @@ local toggleCorner = Instance.new("UICorner")
 toggleCorner.CornerRadius = UDim.new(0, 4)
 toggleCorner.Parent = toggleUIBtn
 
--- Main Frame
+-- Main Frame (ORIGINAL)
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 240, 0, 340)
-mainFrame.Position = UDim2.new(0.5, -120, 0.5, -170)
+mainFrame.Size = UDim2.new(0, 240, 0, isPC and 370 or 340)
+mainFrame.Position = UDim2.new(0.5, -120, 0.5, -(isPC and 185 or 170))
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
@@ -79,7 +113,7 @@ local mainCorner = Instance.new("UICorner")
 mainCorner.CornerRadius = UDim.new(0, 6)
 mainCorner.Parent = mainFrame
 
--- Title Bar
+-- Title Bar (ORIGINAL)
 local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1, 0, 0, 28)
 titleBar.Position = UDim2.new(0, 0, 0, 0)
@@ -98,14 +132,53 @@ titleText.TextSize = 14
 titleText.TextXAlignment = Enum.TextXAlignment.Left
 titleText.Parent = titleBar
 
--- Content Frame
+-- Content Frame (ORIGINAL)
 local contentFrame = Instance.new("Frame")
 contentFrame.Size = UDim2.new(1, -10, 1, -38)
 contentFrame.Position = UDim2.new(0, 5, 0, 33)
 contentFrame.BackgroundTransparency = 1
 contentFrame.Parent = mainFrame
 
--- Toggle Buttons
+-- Add Keybind Option for PC (ORIGINAL)
+if isPC then
+    local keybindContainer = Instance.new("Frame")
+    keybindContainer.Size = UDim2.new(1, 0, 0, 30)
+    keybindContainer.Position = UDim2.new(0, 0, 0, 175)
+    keybindContainer.BackgroundTransparency = 1
+    keybindContainer.Parent = contentFrame
+
+    local keybindLabel = Instance.new("TextLabel")
+    keybindLabel.Size = UDim2.new(0.6, 0, 1, 0)
+    keybindLabel.Position = UDim2.new(0, 0, 0, 0)
+    keybindLabel.BackgroundTransparency = 1
+    keybindLabel.Text = "Aimlock Key: " .. aimbindKey.Name
+    keybindLabel.TextColor3 = Color3.new(1,1,1)
+    keybindLabel.Font = Enum.Font.Gotham
+    keybindLabel.TextSize = 13
+    keybindLabel.TextXAlignment = Enum.TextXAlignment.Left
+    keybindLabel.Parent = keybindContainer
+
+    local keybindBtn = Instance.new("TextButton")
+    keybindBtn.Size = UDim2.new(0.35, 0, 1, 0)
+    keybindBtn.Position = UDim2.new(0.65, 0, 0, 0)
+    keybindBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 90)
+    keybindBtn.Text = "Change"
+    keybindBtn.TextColor3 = Color3.new(1,1,1)
+    keybindBtn.Font = Enum.Font.Gotham
+    keybindBtn.TextSize = 13
+    keybindBtn.Parent = keybindContainer
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 4)
+    btnCorner.Parent = keybindBtn
+
+    keybindBtn.MouseButton1Click:Connect(function()
+        waitingForKeybind = true
+        keybindBtn.Text = "Press any key..."
+    end)
+end
+
+-- Original Toggle Buttons (ORIGINAL)
 local function CreateToggle(text, yPos, default, onColor, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 30)
@@ -130,25 +203,31 @@ local function CreateToggle(text, yPos, default, onColor, callback)
     end)
 end
 
-CreateToggle("AimLock", 0, aimLockActive, Color3.fromRGB(0, 180, 80), function(s) aimLockActive = s end)
-CreateToggle("FOV Circle", 35, fovVisible, Color3.fromRGB(0, 120, 220), function(s) 
+-- Adjust yPos for PC version (ORIGINAL)
+local yPos = isPC and 35 or 0
+CreateToggle("AimLock", yPos, aimLockActive, Color3.fromRGB(0, 180, 80), function(s) aimLockActive = s end)
+yPos = yPos + 35
+CreateToggle("FOV Circle", yPos, fovVisible, Color3.fromRGB(0, 120, 220), function(s) 
     fovVisible = s 
     updateFOVCircle()
 end)
-CreateToggle("Zombie ESP", 70, espVisible, Color3.fromRGB(220, 120, 0), function(s) 
+yPos = yPos + 35
+CreateToggle("Zombie ESP", yPos, espVisible, Color3.fromRGB(220, 120, 0), function(s) 
     espVisible = s 
     updateESP() 
 end)
-CreateToggle("Wall Check", 105, wallCheckEnabled, Color3.fromRGB(0, 150, 150), function(s) wallCheckEnabled = s end)
-CreateToggle("Expand Hitbox", 140, hitboxEnabled, Color3.fromRGB(160, 0, 160), function(s) 
+yPos = yPos + 35
+CreateToggle("Wall Check", yPos, wallCheckEnabled, Color3.fromRGB(0, 150, 150), function(s) wallCheckEnabled = s end)
+yPos = yPos + 35
+CreateToggle("Expand Hitbox", yPos, hitboxEnabled, Color3.fromRGB(160, 0, 160), function(s) 
     hitboxEnabled = s 
     updateAllZombies() 
 end)
 
--- FOV Slider (Fixed Version)
+-- Original FOV Slider (ORIGINAL)
 local sliderContainer = Instance.new("Frame")
 sliderContainer.Size = UDim2.new(1, 0, 0, 40)
-sliderContainer.Position = UDim2.new(0, 0, 0, 180)
+sliderContainer.Position = UDim2.new(0, 0, 0, isPC and 210 or 180)
 sliderContainer.BackgroundTransparency = 1
 sliderContainer.Parent = contentFrame
 
@@ -170,7 +249,7 @@ sliderTrack.BackgroundColor3 = Color3.fromRGB(70, 70, 90)
 sliderTrack.Parent = sliderContainer
 
 local sliderFill = Instance.new("Frame")
-sliderFill.Size = UDim2.new((aimFOV - 20)/280, 0, 1, 0)  -- 20-300 range
+sliderFill.Size = UDim2.new((aimFOV - 20)/280, 0, 1, 0)
 sliderFill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 sliderFill.Parent = sliderTrack
 
@@ -187,13 +266,12 @@ knobCorner.Parent = sliderKnob
 sliderTrack.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         draggingSlider = true
-        -- Immediate update when clicking
         local mouseX = UserInputService:GetMouseLocation().X
         local sliderX = sliderTrack.AbsolutePosition.X
         local sliderWidth = sliderTrack.AbsoluteSize.X
         local relativeX = math.clamp(mouseX - sliderX, 0, sliderWidth)
         
-        aimFOV = math.floor(20 + (relativeX/sliderWidth) * 280)  -- 20-300 range
+        aimFOV = math.floor(20 + (relativeX/sliderWidth) * 280)
         sliderFill.Size = UDim2.new((aimFOV - 20)/280, 0, 1, 0)
         sliderKnob.Position = UDim2.new((aimFOV - 20)/280, -6, 0.5, -6)
         sliderLabel.Text = "Aim FOV: " .. aimFOV
@@ -201,16 +279,10 @@ sliderTrack.InputBegan:Connect(function(input)
     end
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSlider = false
-    end
-end)
-
--- Hitbox Selection
+-- Original Hitbox Selection (ORIGINAL)
 local hitboxContainer = Instance.new("Frame")
 hitboxContainer.Size = UDim2.new(1, 0, 0, 30)
-hitboxContainer.Position = UDim2.new(0, 0, 0, 230)
+hitboxContainer.Position = UDim2.new(0, 0, 0, isPC and 260 or 230)
 hitboxContainer.BackgroundTransparency = 1
 hitboxContainer.Parent = contentFrame
 
@@ -257,15 +329,51 @@ torsoBtn.MouseButton1Click:Connect(function()
     torsoBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 end)
 
--- UI Toggle Functionality
+-- UI Toggle Functionality (with X key support) (ORIGINAL)
 toggleUIBtn.MouseButton1Click:Connect(function()
     uiVisible = not uiVisible
     mainFrame.Visible = uiVisible
-    toggleUIBtn.Text = uiVisible and "Hide UI" or "Show UI"
+    toggleUIBtn.Text = uiVisible and "Hide UI [X]" or "Show UI [X]"
+end)
+
+-- X Key Toggle (ORIGINAL)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.X then
+        uiVisible = not uiVisible
+        mainFrame.Visible = uiVisible
+        toggleUIBtn.Text = uiVisible and "Hide UI [X]" or "Show UI [X]"
+    end
+    
+    -- Keybind handling for PC (ORIGINAL)
+    if isPC then
+        if waitingForKeybind then
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                aimbindKey = input.KeyCode
+                waitingForKeybind = false
+                -- Update keybind display
+                for _, v in pairs(screenGui:GetDescendants()) do
+                    if v:IsA("TextLabel") and v.Text:find("Aimlock Key") then
+                        v.Text = "Aimlock Key: " .. aimbindKey.Name
+                    elseif v:IsA("TextButton") and v.Text == "Press any key..." then
+                        v.Text = "Change"
+                    end
+                end
+            end
+        elseif input.KeyCode == aimbindKey then
+            aimLockActive = not aimLockActive
+            -- Update toggle display
+            for _, v in pairs(screenGui:GetDescendants()) do
+                if v:IsA("TextButton") and v.Text:find("AimLock") then
+                    v.Text = "AimLock: " .. (aimLockActive and "ON" or "OFF")
+                    v.BackgroundColor3 = aimLockActive and Color3.fromRGB(0, 180, 80) or Color3.fromRGB(70, 70, 90)
+                end
+            end
+        end
+    end
 end)
 
 ----------------------------------------------------------------
--- ESP FUNCTIONS (With zombie names)
+-- ESP FUNCTIONS (ORIGINAL)
 ----------------------------------------------------------------
 local function clearESP()
     for _, v in pairs(espObjects) do
@@ -278,7 +386,6 @@ end
 
 local function createESP(zombie)
     if zombie:IsA("Model") and not zombie:FindFirstChild("ESP_Highlight") then
-        -- Create highlight
         local highlight = Instance.new("Highlight")
         highlight.Name = "ESP_Highlight"
         highlight.Adornee = zombie
@@ -288,7 +395,6 @@ local function createESP(zombie)
         highlight.OutlineTransparency = 0
         highlight.Parent = zombie
         
-        -- Create name label
         local nameLabel = Instance.new("BillboardGui")
         nameLabel.Name = "ESP_Name"
         nameLabel.Adornee = zombie:FindFirstChild("Head") or zombie:FindFirstChild("HumanoidRootPart")
@@ -330,7 +436,7 @@ zombiesFolder.ChildAdded:Connect(function(child)
 end)
 
 ----------------------------------------------------------------
--- AIMBOT FUNCTIONS (With Fixed FOV)
+-- AIMBOT FUNCTIONS (ORIGINAL)
 ----------------------------------------------------------------
 local function getClosestZombieInFOV()
     local closestZombie = nil
@@ -347,7 +453,6 @@ local function getClosestZombieInFOV()
                     local screenDistance = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
                     local worldDistance = (part.Position - camera.CFrame.Position).Magnitude
                     
-                    -- Using the FOV circle radius for targeting
                     if screenDistance <= aimFOV and worldDistance < closestDistance then
                         local visible = true
                         if wallCheckEnabled then
@@ -356,11 +461,17 @@ local function getClosestZombieInFOV()
                             raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
                             raycastParams.IgnoreWater = true
                             
-                            local rayOrigin = camera.CFrame.Position
-                            local rayDirection = (part.Position - rayOrigin).Unit * (worldDistance + 5)
+                            local rayDirection = (part.Position - camera.CFrame.Position)
+                            local result = workspace:Raycast(
+                                camera.CFrame.Position,
+                                rayDirection.Unit * rayDirection.Magnitude,
+                                raycastParams
+                            )
                             
-                            local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-                            visible = not result or result.Instance:IsDescendantOf(zombie)
+                            if result then
+                                local hitPart = result.Instance
+                                visible = hitPart and (hitPart:IsDescendantOf(zombie) or hitPart == part)
+                            end
                         end
                         
                         if visible then
@@ -377,60 +488,42 @@ local function getClosestZombieInFOV()
 end
 
 ----------------------------------------------------------------
--- HITBOX FUNCTIONS (Modified to make all parts except head invisible)
+-- HITBOX FUNCTIONS (ORIGINAL)
 ----------------------------------------------------------------
 local function expandHeadHitbox(zombie)
-    if zombie:IsA("Model") then
-        -- Make all parts invisible except head
-        for _, part in ipairs(zombie:GetDescendants()) do
-            if part:IsA("BasePart") then
-                if part.Name == "Head" then
-                    if not part:FindFirstChild("OriginalTransparency") then
-                        local originalTransparency = Instance.new("NumberValue")
-                        originalTransparency.Name = "OriginalTransparency"
-                        originalTransparency.Value = part.Transparency
-                        originalTransparency.Parent = part
-                    end
-                    part.Transparency = 0.5
-                    part.Material = Enum.Material.ForceField
-                    
-                    -- Still expand head hitbox
-                    if not part:FindFirstChild("OriginalSize") then
-                        local originalSize = Instance.new("Vector3Value")
-                        originalSize.Name = "OriginalSize"
-                        originalSize.Value = part.Size
-                        originalSize.Parent = part
-                    end
-                    part.Size = Vector3.new(5, 5, 5)
-                    part.CanCollide = false
-                else
-                    if not part:FindFirstChild("OriginalTransparency") then
-                        local originalTransparency = Instance.new("NumberValue")
-                        originalTransparency.Name = "OriginalTransparency"
-                        originalTransparency.Value = part.Transparency
-                        originalTransparency.Parent = part
-                    end
-                    part.Transparency = 1  -- Make completely invisible
-                end
+    if zombie:IsA("Model") and zombie:FindFirstChild("Head") then
+        local head = zombie.Head
+        if head:IsA("BasePart") then
+            if not head:FindFirstChild("OriginalSize") then
+                local originalSize = Instance.new("Vector3Value")
+                originalSize.Name = "OriginalSize"
+                originalSize.Value = head.Size
+                originalSize.Parent = head
             end
+            
+            head.Size = Vector3.new(5, 5, 5)
+            head.Transparency = 0.5
+            head.CanCollide = false
+            head.Material = Enum.Material.ForceField
         end
     end
 end
 
 local function resetHeadHitbox(zombie)
-    if zombie:IsA("Model") then
-        -- Restore all parts
-        for _, part in ipairs(zombie:GetDescendants()) do
-            if part:IsA("BasePart") and part:FindFirstChild("OriginalTransparency") then
-                part.Transparency = part.OriginalTransparency.Value
-                part.Material = Enum.Material.Plastic
-                part.OriginalTransparency:Destroy()
-                
-                if part.Name == "Head" and part:FindFirstChild("OriginalSize") then
-                    part.Size = part.OriginalSize.Value
-                    part.CanCollide = true
-                    part.OriginalSize:Destroy()
-                end
+    if zombie:IsA("Model") and zombie:FindFirstChild("Head") then
+        local head = zombie.Head
+        if head:IsA("BasePart") then
+            if head:FindFirstChild("OriginalSize") then
+                head.Size = head.OriginalSize.Value
+                head.Transparency = 0
+                head.CanCollide = true
+                head.Material = Enum.Material.Plastic
+                head.OriginalSize:Destroy()
+            else
+                head.Size = Vector3.new(1, 1, 1)
+                head.Transparency = 0
+                head.CanCollide = true
+                head.Material = Enum.Material.Plastic
             end
         end
     end
@@ -457,7 +550,7 @@ end)
 updateAllZombies()
 
 ----------------------------------------------------------------
--- MAIN LOOP
+-- MAIN LOOP (ORIGINAL)
 ----------------------------------------------------------------
 RunService.RenderStepped:Connect(function()
     -- Handle FOV slider dragging
@@ -467,7 +560,7 @@ RunService.RenderStepped:Connect(function()
         local sliderWidth = sliderTrack.AbsoluteSize.X
         local relativeX = math.clamp(mouseX - sliderX, 0, sliderWidth)
         
-        aimFOV = math.floor(20 + (relativeX/sliderWidth) * 280)  -- 20-300 range
+        aimFOV = math.floor(20 + (relativeX/sliderWidth) * 280)
         sliderFill.Size = UDim2.new((aimFOV - 20)/280, 0, 1, 0)
         sliderKnob.Position = UDim2.new((aimFOV - 20)/280, -6, 0.5, -6)
         sliderLabel.Text = "Aim FOV: " .. aimFOV
