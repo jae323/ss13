@@ -488,7 +488,7 @@ local function getClosestZombieInFOV()
 end
 
 ----------------------------------------------------------------
--- HITBOX FUNCTIONS (ORIGINAL)
+-- HITBOX FUNCTIONS (MODIFIED - Head no longer disappears)
 ----------------------------------------------------------------
 local function expandHeadHitbox(zombie)
     if zombie:IsA("Model") and zombie:FindFirstChild("Head") then
@@ -502,7 +502,6 @@ local function expandHeadHitbox(zombie)
             end
             
             head.Size = Vector3.new(5, 5, 5)
-            head.Transparency = 0.5
             head.CanCollide = false
             head.Material = Enum.Material.ForceField
         end
@@ -515,13 +514,11 @@ local function resetHeadHitbox(zombie)
         if head:IsA("BasePart") then
             if head:FindFirstChild("OriginalSize") then
                 head.Size = head.OriginalSize.Value
-                head.Transparency = 0
                 head.CanCollide = true
                 head.Material = Enum.Material.Plastic
                 head.OriginalSize:Destroy()
             else
                 head.Size = Vector3.new(1, 1, 1)
-                head.Transparency = 0
                 head.CanCollide = true
                 head.Material = Enum.Material.Plastic
             end
