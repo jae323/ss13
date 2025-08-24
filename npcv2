@@ -473,7 +473,59 @@ zombiesFolder.ChildAdded:Connect(function(child)
 end)
 
 ----------------------------------------------------------------
--- AIMBOT FUNCTIONS (MODIFIED - Ignore SwampGiant)
+-- SPECIAL SNIPER ZOMBIE HANDLING (NEW)
+----------------------------------------------------------------
+local function isSniperZombie(zombie)
+    -- Check if this is a sniper zombie by name or other characteristics
+    return zombie.Name:lower():find("sniper") or zombie.Name:lower():find("shooter")
+end
+
+local function getSniperZombieRealPosition(zombie)
+    -- Try to find the actual position of the sniper zombie
+    -- This is a workaround for the visual bug where it appears stuck at spawn
+    
+    -- Method 1: Check if there's a humanoid root part that might have the real position
+    local rootPart = zombie:FindFirstChild("HumanoidRootPart")
+    if rootPart and (rootPart.Position - zombie:GetPivot().Position).Magnitude > 5 then
+        return rootPart.Position
+    end
+    
+    -- Method 2: Check for any moving parts
+    for _, part in ipairs(zombie:GetChildren()) do
+        if part:IsA("BasePart") and part.Velocity.Magnitude > 0 then
+            return part.Position
+        end
+    end
+    
+    -- Method 3: If all else fails, try to find the zombie by raycasting
+    local character = player.Character
+    if character then
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if humanoidRootPart then
+            -- Raycast to find zombies in the direction the player is facing
+            local rayOrigin = humanoidRootPart.Position
+            local rayDirection = (humanoidRootPart.CFrame.LookVector * 100)
+            local raycastParams = RaycastParams.new()
+            raycastParams.FilterDescendantsInstances = {character}
+            raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+            raycastParams.IgnoreWater = true
+            
+            local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+            if result and result.Instance then
+                local hitZombie = result.Instance:FindFirstAncestorOfClass("Model")
+                if hitZombie == zombie then
+                    return result.Position
+                end
+            end
+        end
+    end
+    
+    -- Fallback: Return the visual position
+    return zombie:GetPivot().Position
+end
+
+----------------------------------------------------------------
+-- AIMBOT FUNCTIONS (MODIFIED - Special handling for sniper zombies)
 ----------------------------------------------------------------
 local function getClosestZombieInFOV()
     local closestZombie = nil
@@ -485,11 +537,17 @@ local function getClosestZombieInFOV()
         if zombie:IsA("Model") and zombie.Name ~= "SwampGiant" then
             local part = zombie:FindFirstChild(aimPartName)
             if part then
-                local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
+                -- Special handling for sniper zombies with visual bugs
+                local targetPosition = part.Position
+                if isSniperZombie(zombie) then
+                    targetPosition = getSniperZombieRealPosition(zombie)
+                end
+                
+                local screenPos, onScreen = camera:WorldToViewportPoint(targetPosition)
                 
                 if onScreen then
                     local screenDistance = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
-                    local worldDistance = (part.Position - camera.CFrame.Position).Magnitude
+                    local worldDistance = (targetPosition - camera.CFrame.Position).Magnitude
                     
                     if screenDistance <= aimFOV and worldDistance < closestDistance then
                         local visible = true
@@ -499,7 +557,7 @@ local function getClosestZombieInFOV()
                             raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
                             raycastParams.IgnoreWater = true
                             
-                            local rayDirection = (part.Position - camera.CFrame.Position)
+                            local rayDirection = (targetPosition - camera.CFrame.Position)
                             local result = workspace:Raycast(
                                 camera.CFrame.Position,
                                 rayDirection.Unit * rayDirection.Magnitude,
@@ -526,7 +584,7 @@ local function getClosestZombieInFOV()
 end
 
 ----------------------------------------------------------------
--- HITBOX FUNCTIONS (MODIFIED - Head no longer disappears)
+-- HITBOX FUNCTIONS (MODIFIED - Special handling for sniper zombies)
 ----------------------------------------------------------------
 local function expandHeadHitbox(zombie)
     if zombie:IsA("Model") and zombie:FindFirstChild("Head") then
@@ -539,7 +597,13 @@ local function expandHeadHitbox(zombie)
                 originalSize.Parent = head
             end
             
-            head.Size = Vector3.new(5, 5, 5)
+            -- Special hitbox for sniper zombies (4x4x4 as requested)
+            if isSniperZombie(zombie) then
+                head.Size = Vector3.new(4, 4, 4)  -- 4x4x4 for sniper zombies
+            else
+                head.Size = Vector3.new(5, 5, 5)  -- Regular size for other zombies
+            end
+            
             head.CanCollide = false
             head.Material = Enum.Material.ForceField
         end
@@ -585,7 +649,7 @@ end)
 updateAllZombies()
 
 ----------------------------------------------------------------
--- MAIN LOOP (MODIFIED - Fixed FOV dragging)
+-- MAIN LOOP (MODIFIED - Special targeting for sniper zombies)
 ----------------------------------------------------------------
 RunService.RenderStepped:Connect(function()
     -- Update FOV circle position and size
@@ -597,7 +661,13 @@ RunService.RenderStepped:Connect(function()
         if targetZombie then
             local targetPart = targetZombie[aimPartName]
             if targetPart then
-                camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
+                -- Special handling for sniper zombies
+                local targetPosition = targetPart.Position
+                if isSniperZombie(targetZombie) then
+                    targetPosition = getSniperZombieRealPosition(targetZombie)
+                end
+                
+                camera.CFrame = CFrame.new(camera.CFrame.Position, targetPosition)
             end
         end
     end
