@@ -210,7 +210,9 @@ end
 
 -- Adjust yPos for PC version (ORIGINAL)
 local yPos = isPC and 35 or 0
-CreateToggle("AimLock", yPos, aimLockActive, Color3.fromRGB(0, 180, 80), function(s) aimLockActive = s end)
+
+-- MODIFIED: Add [E] to the AimLock text to indicate the keybind
+CreateToggle("AimLock [E]", yPos, aimLockActive, Color3.fromRGB(0, 180, 80), function(s) aimLockActive = s end)
 yPos = yPos + 35
 CreateToggle("FOV Circle", yPos, fovVisible, Color3.fromRGB(0, 120, 220), function(s) 
     fovVisible = s 
@@ -377,6 +379,19 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         toggleUIBtn.Text = uiVisible and "Hide UI [X]" or "Show UI [X]"
     end
     
+    -- NEW: E Key Toggle for Aimlock
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.E then
+        aimLockActive = not aimLockActive
+        
+        -- Update toggle display
+        for _, v in pairs(screenGui:GetDescendants()) do
+            if v:IsA("TextButton") and v.Text:find("AimLock") then
+                v.Text = "AimLock [E]: " .. (aimLockActive and "ON" or "OFF")
+                v.BackgroundColor3 = aimLockActive and Color3.fromRGB(0, 180, 80) or Color3.fromRGB(70, 70, 90)
+            end
+        end
+    end
+    
     -- Keybind handling for PC (ORIGINAL)
     if isPC then
         if waitingForKeybind then
@@ -397,7 +412,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             -- Update toggle display
             for _, v in pairs(screenGui:GetDescendants()) do
                 if v:IsA("TextButton") and v.Text:find("AimLock") then
-                    v.Text = "AimLock: " .. (aimLockActive and "ON" or "OFF")
+                    v.Text = "AimLock [E]: " .. (aimLockActive and "ON" or "OFF")
                     v.BackgroundColor3 = aimLockActive and Color3.fromRGB(0, 180, 80) or Color3.fromRGB(70, 70, 90)
                 end
             end
