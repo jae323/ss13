@@ -1,6 +1,4 @@
-I'll add back the version selection, change the guardian setting to have preset options (25, 50, 70 studs), move it below the FOV settings, and update the credit text. Here's the updated script:
-
-```lua
+I'll add a more robust GUI initialization method that should work across different games 
 -- Smart Special Killing Aimbot
 -- Modified from Ultimate Zombie Aimlock Script
 -- Features: GuardianZombie priority when near closest zombie, Boss ignore at 50% HP
@@ -17,37 +15,64 @@ if game:GetService("CoreGui"):FindFirstChild("SmartSpecialKillingGUI") or player
     return -- Nếu đã tồn tại thì không tạo lại
 end
 
--- NEW: Robust GUI initialization
-repeat task.wait() until player:IsDescendantOf(game) and player:FindFirstChild("PlayerGui")
-
+-- NEW: Robust GUI initialization that works across different games and exploits
 local function createSafeGUI()
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "SmartSpecialKillingGUI"
     screenGui.ResetOnSpawn = false
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
-    -- 1st try: Standard PlayerGui
-    local success = pcall(function()
+    -- Try multiple methods to ensure GUI appears
+    local success, result = pcall(function()
+        -- 1st try: Standard PlayerGui
         screenGui.Parent = player:WaitForChild("PlayerGui", 5)
     end)
     
     if not success then
-        -- 2nd try: Exploit-specific methods
-        pcall(function()
-            if get_hidden_gui then
-                screenGui.Parent = get_hidden_gui()
-            elseif gethui then
-                screenGui.Parent = gethui()
-            elseif syn and syn.protect_gui then
-                syn.protect_gui(screenGui)
-                screenGui.Parent = game:GetService("CoreGui")
-            else
-                screenGui.Parent = game:GetService("CoreGui")
-            end
+        -- 2nd try: CoreGui as fallback
+        success, result = pcall(function()
+            screenGui.Parent = game:GetService("CoreGui")
         end)
     end
+    
+    if not success then
+        -- 3rd try: Exploit-specific methods
+        success, result = pcall(function()
+            if get_hidden_gui then
+                screenGui.Parent = get_hidden_gui()
+            end
+        end)
+        
+        if not success then
+            success, result = pcall(function()
+                if gethui then
+                    screenGui.Parent = gethui()
+                end
+            end)
+        end
+        
+        if not success then
+            success, result = pcall(function()
+                if syn and syn.protect_gui then
+                    syn.protect_gui(screenGui)
+                    screenGui.Parent = game:GetService("CoreGui")
+                end
+            end)
+        end
+    end
+    
+    -- Final fallback: Try CoreGui again
+    if not success then
+        pcall(function()
+            screenGui.Parent = game:GetService("CoreGui")
+        end)
+    end
+    
     return screenGui
 end
+
+-- Wait for player to be ready
+repeat task.wait() until player:IsDescendantOf(game) and player:FindFirstChild("PlayerGui")
 
 local screenGui = createSafeGUI()
 
@@ -652,381 +677,4 @@ local function initializeModernGUI()
             guardian70Btn.BackgroundColor3 = buttonColor
         end
     )
-    guardian50Btn.BackgroundColor3 = GUARDIAN_PRIORITY_RANGE == 50 and accentColor or buttonColor
-    
-    local guardian70Btn = createModernButton(
-        guardianRangeContainer,
-        "70",
-        UDim2.new(0.3, 0, 0, 25),
-        UDim2.new(0.7, 0, 0, 20),
-        function()
-            GUARDIAN_PRIORITY_RANGE = 70
-            guardianRangeLabel.Text = "Guardian Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
-            guardian25Btn.BackgroundColor3 = buttonColor
-            guardian50Btn.BackgroundColor3 = buttonColor
-            guardian70Btn.BackgroundColor3 = accentColor
-        end
-    )
-    guardian70Btn.BackgroundColor3 = GUARDIAN_PRIORITY_RANGE == 70 and accentColor or buttonColor
-    
-    yPos = yPos + 45
-    
-    -- Hitbox Selection
-    local hitboxContainer = Instance.new("Frame")
-    hitboxContainer.Size = UDim2.new(1, 0, 0, 40)
-    hitboxContainer.Position = UDim2.new(0, 0, 0, yPos)
-    hitboxContainer.BackgroundTransparency = 1
-    hitboxContainer.Parent = contentScrollingFrame
-    
-    local hitboxLabel = Instance.new("TextLabel")
-    hitboxLabel.Size = UDim2.new(1, 0, 0, 20)
-    hitboxLabel.Position = UDim2.new(0, 0, 0, 0)
-    hitboxLabel.BackgroundTransparency = 1
-    hitboxLabel.Text = "Aim Part:"
-    hitboxLabel.TextColor3 = textColor
-    hitboxLabel.Font = Enum.Font.Gotham
-    hitboxLabel.TextSize = 13
-    hitboxLabel.TextXAlignment = Enum.TextXAlignment.Left
-    hitboxLabel.Parent = hitboxContainer
-    
-    -- Store button references for later updates
-    local headBtn, torsoBtn
-    
-    headBtn = createModernButton(
-        hitboxContainer,
-        "Head",
-        UDim2.new(0.48, 0, 0, 25),
-        UDim2.new(0, 0, 0, 20),
-        function()
-            aimPartName = "Head"
-            headBtn.BackgroundColor3 = accentColor
-            torsoBtn.BackgroundColor3 = buttonColor
-        end
-    )
-    headBtn.BackgroundColor3 = aimPartName == "Head" and accentColor or buttonColor
-    
-    torsoBtn = createModernButton(
-        hitboxContainer,
-        "Torso",
-        UDim2.new(0.48, 0, 0, 25),
-        UDim2.new(0.52, 0, 0, 20),
-        function()
-            aimPartName = "HumanoidRootPart"
-            headBtn.BackgroundColor3 = buttonColor
-            torsoBtn.BackgroundColor3 = accentColor
-        end
-    )
-    torsoBtn.BackgroundColor3 = aimPartName == "HumanoidRootPart" and accentColor or buttonColor
-    
-    yPos = yPos + 45
-    
-    -- Add Keybind Option for PC
-    if isPC then
-        local keybindContainer = Instance.new("Frame")
-        keybindContainer.Size = UDim2.new(1, 0, 0, 40)
-        keybindContainer.Position = UDim2.new(0, 0, 0, yPos)
-        keybindContainer.BackgroundTransparency = 1
-        keybindContainer.Parent = contentScrollingFrame
-        
-        local keybindLabel = Instance.new("TextLabel")
-        keybindLabel.Size = UDim2.new(0.6, 0, 0, 20)
-        keybindLabel.Position = UDim2.new(0, 0, 0, 0)
-        keybindLabel.BackgroundTransparency = 1
-        keybindLabel.Text = "Aimlock Key: " .. aimbindKey.Name
-        keybindLabel.TextColor3 = textColor
-        keybindLabel.Font = Enum.Font.Gotham
-        keybindLabel.TextSize = 13
-        keybindLabel.TextXAlignment = Enum.TextXAlignment.Left
-        keybindLabel.Parent = keybindContainer
-        
-        local keybindBtn = createModernButton(
-            keybindContainer,
-            "Change",
-            UDim2.new(0.35, 0, 0, 25),
-            UDim2.new(0.65, 0, 0, 0),
-            function()
-                waitingForKeybind = true
-                keybindBtn.Text = "Press any key..."
-            end
-        )
-        
-        yPos = yPos + 45
-    end
-    
-    -- Credit label
-    local creditLabel = Instance.new("TextLabel")
-    creditLabel.Size = UDim2.new(1, 0, 0, 20)
-    creditLabel.Position = UDim2.new(0, 0, 0, yPos)
-    creditLabel.BackgroundTransparency = 1
-    creditLabel.Text = "Made by Jae"
-    creditLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-    creditLabel.Font = Enum.Font.Gotham
-    creditLabel.TextSize = 11
-    creditLabel.TextXAlignment = Enum.TextXAlignment.Right
-    creditLabel.Parent = contentScrollingFrame
-    
-    -- Update canvas size automatically
-    contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        contentScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 20)
-    end)
-    
-    -- X Key Toggle
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if not gameProcessed and input.KeyCode == Enum.KeyCode.X then
-            uiVisible = not uiVisible
-            mainFrame.Visible = uiVisible
-            toggleUIBtn.Text = uiVisible and "Hide UI [X]" or "Show UI [X]"
-        end
-        
-        -- E Key Toggle for Aimlock
-        if not gameProcessed and input.KeyCode == Enum.KeyCode.E then
-            aimLockActive = not aimLockActive
-            
-            -- Update toggle display
-            for _, v in pairs(contentScrollingFrame:GetChildren()) do
-                if v:IsA("Frame") and v:FindFirstChildOfClass("TextLabel") and 
-                   v:FindFirstChildOfClass("TextLabel").Text:find("AimLock") then
-                    local btn = v:FindFirstChildOfClass("TextButton")
-                    if btn then
-                        btn.Text = aimLockActive and "ON" or "OFF"
-                        btn.BackgroundColor3 = aimLockActive and successColor or buttonColor
-                    end
-                end
-            end
-        end
-        
-        -- Keybind handling for PC
-        if isPC then
-            if waitingForKeybind then
-                if input.UserInputType == Enum.UserInputType.Keyboard then
-                    aimbindKey = input.KeyCode
-                    waitingForKeybind = false
-                    -- Update keybind display
-                    for _, v in pairs(contentScrollingFrame:GetChildren()) do
-                        if v:IsA("Frame") and v:FindFirstChildOfClass("TextLabel") and 
-                           v:FindFirstChildOfClass("TextLabel").Text:find("Aimlock Key") then
-                            v:FindFirstChildOfClass("TextLabel").Text = "Aimlock Key: " .. aimbindKey.Name
-                            for _, btn in pairs(v:GetChildren()) do
-                                if btn:IsA("TextButton") and btn.Text == "Press any key..." then
-                                    btn.Text = "Change"
-                                end
-                            end
-                        end
-                    end
-                end
-            elseif input.KeyCode == aimbindKey then
-                aimLockActive = not aimLockActive
-                -- Update toggle display
-                for _, v in pairs(contentScrollingFrame:GetChildren()) do
-                    if v:IsA("Frame") and v:FindFirstChildOfClass("TextLabel") and 
-                       v:FindFirstChildOfClass("TextLabel").Text:find("AimLock") then
-                        local btn = v:FindFirstChildOfClass("TextButton")
-                        if btn then
-                            btn.Text = aimLockActive and "ON" or "OFF"
-                            btn.BackgroundColor3 = aimLockActive and successColor or buttonColor
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
--- Function to generate a random color
-local function getRandomColor()
-    return Color3.new(math.random(), math.random(), math.random())
-end
-
--- Tạo GUI lựa chọn phiên bản phía dưới GUI chính
-local function createModernVersionSelectionGUI()
-    versionFrame = Instance.new("Frame")
-    versionFrame.Size = UDim2.new(0, 200, 0, 180)
-    versionFrame.Position = UDim2.new(0.5, -100, 0.5, 50)
-    versionFrame.BackgroundColor3 = backgroundColor
-    versionFrame.BorderSizePixel = 0
-    versionFrame.Parent = screenGui
-    versionFrame.Visible = false
-    versionFrame.Active = true
-    versionFrame.Draggable = true
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = versionFrame
-    
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 25)
-    title.Position = UDim2.new(0, 0, 0, 0)
-    title.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    title.BorderSizePixel = 0
-    title.Text = "SELECT VERSION"
-    title.TextColor3 = textColor
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 12
-    title.Parent = versionFrame
-    
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 8)
-    titleCorner.Parent = title
-    
-    local buttonScrollingFrame = Instance.new("ScrollingFrame")
-    buttonScrollingFrame.Size = UDim2.new(1, -10, 1, -35)
-    buttonScrollingFrame.Position = UDim2.new(0, 5, 0, 30)
-    buttonScrollingFrame.BackgroundTransparency = 1
-    buttonScrollingFrame.ScrollBarThickness = 6
-    buttonScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 150)
-    buttonScrollingFrame.Parent = versionFrame
-    
-    local buttonLayout = Instance.new("UIListLayout")
-    buttonLayout.Padding = UDim.new(0, 5)
-    buttonLayout.Parent = buttonScrollingFrame
-    
-    -- Store button references for later updates
-    local mainBtn, sniperBtn, ignoreWraithBtn, smartSpecialBtn
-    
-    -- Generate random colors for each version
-    versionButtonColors = {
-        Main = getRandomColor(),
-        OnlySniperzombie = getRandomColor(),
-        IgnoreWraith = getRandomColor(),
-        SmartSpecialKilling = getRandomColor()
-    }
-    
-    mainBtn = createModernButton(
-        buttonScrollingFrame,
-        "Main Gui",
-        UDim2.new(1, 0, 0, 25),
-        UDim2.new(0, 0, 0, 0),
-        function()
-            currentVersion = "Main"
-            mainBtn.BackgroundColor3 = versionButtonColors.Main
-            sniperBtn.BackgroundColor3 = buttonColor
-            ignoreWraithBtn.BackgroundColor3 = buttonColor
-            smartSpecialBtn.BackgroundColor3 = buttonColor
-            
-            -- Cập nhật tiêu đề
-            if mainFrame and mainFrame:FindFirstChild("TitleBar") then
-                local titleText = mainFrame.TitleBar:FindFirstChildOfClass("TextLabel")
-                if titleText then
-                    titleText.Text = "ZOMBIE AIMLOCK"
-                end
-            end
-        end
-    )
-    mainBtn.BackgroundColor3 = currentVersion == "Main" and versionButtonColors.Main or buttonColor
-    
-    sniperBtn = createModernButton(
-        buttonScrollingFrame,
-        "Only Sniperzombie",
-        UDim2.new(1, 0, 0, 25),
-        UDim2.new(0, 0, 0, 0),
-        function()
-            currentVersion = "OnlySniperzombie"
-            sniperBtn.BackgroundColor3 = versionButtonColors.OnlySniperzombie
-            mainBtn.BackgroundColor3 = buttonColor
-            ignoreWraithBtn.BackgroundColor3 = buttonColor
-            smartSpecialBtn.BackgroundColor3 = buttonColor
-            
-            -- Cập nhật tiêu đề
-            if mainFrame and mainFrame:FindFirstChild("TitleBar") then
-                local titleText = mainFrame.TitleBar:FindFirstChildOfClass("TextLabel")
-                if titleText then
-                    titleText.Text = "ONLY SNIPERZOMBIE"
-                end
-            end
-        end
-    )
-    sniperBtn.BackgroundColor3 = currentVersion == "OnlySniperzombie" and versionButtonColors.OnlySniperzombie or buttonColor
-    
-    ignoreWraithBtn = createModernButton(
-        buttonScrollingFrame,
-        "Ignore Wraith",
-        UDim2.new(1, 0, 0, 25),
-        UDim2.new(0, 0, 0, 0),
-        function()
-            currentVersion = "IgnoreWraith"
-            ignoreWraithBtn.BackgroundColor3 = versionButtonColors.IgnoreWraith
-            mainBtn.BackgroundColor3 = buttonColor
-            sniperBtn.BackgroundColor3 = buttonColor
-            smartSpecialBtn.BackgroundColor3 = buttonColor
-            
-            -- Cập nhật tiêu đề
-            if mainFrame and mainFrame:FindFirstChild("TitleBar") then
-                local titleText = mainFrame.TitleBar:FindFirstChildOfClass("TextLabel")
-                if titleText then
-                    titleText.Text = "IGNORE WRAITH"
-                end
-            end
-        end
-    )
-    ignoreWraithBtn.BackgroundColor3 = currentVersion == "IgnoreWraith" and versionButtonColors.IgnoreWraith or buttonColor
-    
-    smartSpecialBtn = createModernButton(
-        buttonScrollingFrame,
-        "Smart Special Killing",
-        UDim2.new(1, 0, 0, 25),
-        UDim2.new(0, 0, 0, 0),
-        function()
-            currentVersion = "SmartSpecialKilling"
-            smartSpecialBtn.BackgroundColor3 = versionButtonColors.SmartSpecialKilling
-            mainBtn.BackgroundColor3 = buttonColor
-            sniperBtn.BackgroundColor3 = buttonColor
-            ignoreWraithBtn.BackgroundColor3 = buttonColor
-            
-            -- Cập nhật tiêu đề
-            if mainFrame and mainFrame:FindFirstChild("TitleBar") then
-                local titleText = mainFrame.TitleBar:FindFirstChildOfClass("TextLabel")
-                if titleText then
-                    titleText.Text = "SMART SPECIAL KILLING"
-                end
-            end
-        end
-    )
-    smartSpecialBtn.BackgroundColor3 = currentVersion == "SmartSpecialKilling" and versionButtonColors.SmartSpecialKilling or buttonColor
-    
-    -- Update canvas size
-    buttonLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        buttonScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, buttonLayout.AbsoluteContentSize.Y + 10)
-    end)
-end
-
-----------------------------------------------------------------
--- ESP FUNCTIONS
-----------------------------------------------------------------
-local function clearESP()
-    for _, v in pairs(espObjects) do
-        if v and v.Parent then
-            v:Destroy()
-        end
-    end
-    espObjects = {}
-end
-
-local function createESP(zombie)
-    if zombie:IsA("Model") and not zombie:FindFirstChild("ESP_Highlight") then
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "ESP_Highlight"
-        highlight.Adornee = zombie
-        highlight.FillColor = Color3.new(1, 0, 0)
-        highlight.OutlineColor = Color3.new(1, 0, 0)
-        highlight.FillTransparency = 0.7
-        highlight.OutlineTransparency = 0
-        highlight.Parent = zombie
-        
-        -- Chỉ tạo nhãn tên nếu không phải là zombie thường
-        if zombie.Name ~= "zombie" then
-            local nameLabel = Instance.new("BillboardGui")
-            nameLabel.Name = "ESP_Name"
-            nameLabel.Adornee = zombie:FindFirstChild("Head") or zombie:FindFirstChild("HumanoidRootPart")
-            nameLabel.Size = UDim2.new(0, 200, 0, 50)
-            nameLabel.StudsOffset = Vector3.new(0, 2, 0)
-            nameLabel.AlwaysOnTop = true
-            nameLabel.Parent = zombie
-            
-            local textLabel = Instance.new("TextLabel")
-            textLabel.Size = UDim2.new(1, 0, 1, 0)
-            textLabel.BackgroundTransparency = 1
-            textLabel.Text = zombie.Name
-            textLabel.TextColor3 = Color3.new(1, 1, 1)
-            textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-           
-```
+    guardian50Btn.BackgroundColor3 = GUARDIAN_PRIORITY_RANGE == 50 and accent
