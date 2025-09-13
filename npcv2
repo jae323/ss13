@@ -1,4 +1,3 @@
-I'll add a more robust GUI initialization method that should work across different games 
 -- Smart Special Killing Aimbot
 -- Modified from Ultimate Zombie Aimlock Script
 -- Features: GuardianZombie priority when near closest zombie, Boss ignore at 50% HP
@@ -10,71 +9,94 @@ local TweenService = game:GetService("TweenService")
 local camera = workspace.CurrentCamera
 local player = Players.LocalPlayer
 
--- Kiểm tra xem GUI đã tồn tại chưa để tránh tạo nhiều lần
-if game:GetService("CoreGui"):FindFirstChild("SmartSpecialKillingGUI") or player.PlayerGui:FindFirstChild("SmartSpecialKillingGUI") then
-    return -- Nếu đã tồn tại thì không tạo lại
-end
+-- Enhanced GUI initialization with multiple fallbacks
+local function initializeGUI()
+    -- Check if GUI already exists
+    if game:GetService("CoreGui"):FindFirstChild("SmartSpecialKillingGUI") or 
+       (player:FindFirstChild("PlayerGui") and player.PlayerGui:FindFirstChild("SmartSpecialKillingGUI")) then
+        return nil -- GUI already exists
+    end
 
--- NEW: Robust GUI initialization that works across different games and exploits
-local function createSafeGUI()
+    -- Wait for player to be ready
+    local maxAttempts = 10
+    for i = 1, maxAttempts do
+        if player:IsDescendantOf(game) and player:FindFirstChild("PlayerGui") then
+            break
+        end
+        task.wait(0.5)
+    end
+
+    -- Create screen GUI with multiple parent fallbacks
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "SmartSpecialKillingGUI"
     screenGui.ResetOnSpawn = false
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    
-    -- Try multiple methods to ensure GUI appears
-    local success, result = pcall(function()
-        -- 1st try: Standard PlayerGui
-        screenGui.Parent = player:WaitForChild("PlayerGui", 5)
-    end)
-    
-    if not success then
-        -- 2nd try: CoreGui as fallback
-        success, result = pcall(function()
-            screenGui.Parent = game:GetService("CoreGui")
-        end)
-    end
-    
-    if not success then
-        -- 3rd try: Exploit-specific methods
-        success, result = pcall(function()
+    screenGui.IgnoreGuiInset = true
+
+    -- Try multiple parent options with priority
+    local parentOptions = {
+        function() 
+            if player:FindFirstChild("PlayerGui") then
+                return player.PlayerGui 
+            end
+        end,
+        function() 
+            return game:GetService("CoreGui") 
+        end,
+        function()
             if get_hidden_gui then
-                screenGui.Parent = get_hidden_gui()
+                return get_hidden_gui()
+            end
+        end,
+        function()
+            if gethui then
+                return gethui()
+            end
+        end,
+        function()
+            if syn and syn.protect_gui then
+                syn.protect_gui(screenGui)
+                return game:GetService("CoreGui")
+            end
+        end
+    }
+
+    -- Try each parent option until one works
+    for _, parentFunc in ipairs(parentOptions) do
+        local success, result = pcall(function()
+            local parent = parentFunc()
+            if parent then
+                screenGui.Parent = parent
+                return true
             end
         end)
         
-        if not success then
-            success, result = pcall(function()
-                if gethui then
-                    screenGui.Parent = gethui()
-                end
-            end)
-        end
-        
-        if not success then
-            success, result = pcall(function()
-                if syn and syn.protect_gui then
-                    syn.protect_gui(screenGui)
-                    screenGui.Parent = game:GetService("CoreGui")
-                end
-            end)
+        if success and screenGui.Parent then
+            break
         end
     end
-    
-    -- Final fallback: Try CoreGui again
-    if not success then
-        pcall(function()
-            screenGui.Parent = game:GetService("CoreGui")
-        end)
+
+    -- Final fallback - force to CoreGui
+    if not screenGui.Parent then
+        pcall(function() screenGui.Parent = game:GetService("CoreGui") end)
     end
-    
+
     return screenGui
 end
 
--- Wait for player to be ready
-repeat task.wait() until player:IsDescendantOf(game) and player:FindFirstChild("PlayerGui")
+-- Initialize GUI with retry mechanism
+local screenGui
+local maxRetries = 3
+for i = 1, maxRetries do
+    screenGui = initializeGUI()
+    if screenGui then break end
+    task.wait(1)
+end
 
-local screenGui = createSafeGUI()
+if not screenGui then
+    warn("Failed to initialize GUI after " .. maxRetries .. " attempts")
+    return
+end
 
 -- Biến toàn cục để xác định phiên bản đang chạy
 local currentVersion = "SmartSpecialKilling" -- "Main", "OnlySniperzombie", "IgnoreWraith", or "SmartSpecialKilling"
@@ -601,80 +623,4 @@ local function initializeModernGUI()
         
         -- Update FOV button colors
         fov50Btn.BackgroundColor3 = aimFOV == 50 and accentColor or buttonColor
-        fov100Btn.BackgroundColor3 = aimFOV == 100 and accentColor or buttonColor
-        fov150Btn.BackgroundColor3 = aimFOV == 150 and accentColor or buttonColor
-    end
-    
-    sliderTrack.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingSlider = true
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if draggingSlider and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local mouseX = UserInputService:GetMouseLocation().X
-            local sliderX = sliderTrack.AbsolutePosition.X
-            local sliderWidth = sliderTrack.AbsoluteSize.X
-            local relativeX = math.clamp(mouseX - sliderX, 0, sliderWidth)
-            
-            aimFOV = math.floor(20 + (relativeX/sliderWidth) * 280)
-            updateFOVSlider()
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingSlider = false
-        end
-    end)
-    
-    yPos = yPos + 50
-    
-    -- Guardian Settings (Moved below FOV)
-    local guardianRangeContainer = Instance.new("Frame")
-    guardianRangeContainer.Size = UDim2.new(1, 0, 0, 40)
-    guardianRangeContainer.Position = UDim2.new(0, 0, 0, yPos)
-    guardianRangeContainer.BackgroundTransparency = 1
-    guardianRangeContainer.Parent = contentScrollingFrame
-    
-    local guardianRangeLabel = Instance.new("TextLabel")
-    guardianRangeLabel.Size = UDim2.new(1, 0, 0, 20)
-    guardianRangeLabel.Position = UDim2.new(0, 0, 0, 0)
-    guardianRangeLabel.BackgroundTransparency = 1
-    guardianRangeLabel.Text = "Guardian Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
-    guardianRangeLabel.TextColor3 = textColor
-    guardianRangeLabel.Font = Enum.Font.Gotham
-    guardianRangeLabel.TextSize = 13
-    guardianRangeLabel.TextXAlignment = Enum.TextXAlignment.Left
-    guardianRangeLabel.Parent = guardianRangeContainer
-    
-    local guardian25Btn = createModernButton(
-        guardianRangeContainer,
-        "25",
-        UDim2.new(0.3, 0, 0, 25),
-        UDim2.new(0, 0, 0, 20),
-        function()
-            GUARDIAN_PRIORITY_RANGE = 25
-            guardianRangeLabel.Text = "Guardian Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
-            guardian25Btn.BackgroundColor3 = accentColor
-            guardian50Btn.BackgroundColor3 = buttonColor
-            guardian70Btn.BackgroundColor3 = buttonColor
-        end
-    )
-    guardian25Btn.BackgroundColor3 = GUARDIAN_PRIORITY_RANGE == 25 and accentColor or buttonColor
-    
-    local guardian50Btn = createModernButton(
-        guardianRangeContainer,
-        "50",
-        UDim2.new(0.3, 0, 0, 25),
-        UDim2.new(0.35, 0, 0, 20),
-        function()
-            GUARDIAN_PRIORITY_RANGE = 50
-            guardianRangeLabel.Text = "Guardian Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
-            guardian25Btn.BackgroundColor3 = buttonColor
-            guardian50Btn.BackgroundColor3 = accentColor
-            guardian70Btn.BackgroundColor3 = buttonColor
-        end
-    )
-    guardian50Btn.BackgroundColor3 = GUARDIAN_PRIORITY_RANGE == 50 and accent
+        fov100Btn.BackgroundColor3 = aimFOV == 100 and accent
