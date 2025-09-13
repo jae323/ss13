@@ -156,9 +156,9 @@ local function isWraithZombie(zombie)
 end
 
 ----------------------------------------------------------------
--- MODERN GUI SYSTEM
+-- SIMPLIFIED GUI SYSTEM
 ----------------------------------------------------------------
-local mainFrame, toggleUIBtn, contentScrollingFrame, versionFrame, toggleVersionBtn
+local mainFrame, toggleUIBtn, contentScrollingFrame
 
 -- Colors
 local backgroundColor = Color3.fromRGB(30, 30, 40)
@@ -253,7 +253,7 @@ local function initializeModernGUI()
     -- UI Toggle Button (with X key functionality)
     toggleUIBtn = createModernButton(
         screenGui,
-        "Hide UI [X]",
+        "Show UI [X]",
         UDim2.new(0, 100, 0, 30),
         UDim2.new(0, 10, 0, 10),
         function()
@@ -263,29 +263,17 @@ local function initializeModernGUI()
         end
     )
     
-    -- Version Toggle Button
-    toggleVersionBtn = createModernButton(
-        screenGui,
-        "Show Version",
-        UDim2.new(0, 100, 0, 30),
-        UDim2.new(0, 10, 0, 50),
-        function()
-            if versionFrame then
-                versionFrame.Visible = not versionFrame.Visible
-                toggleVersionBtn.Text = versionFrame.Visible and "Hide Version" or "Show Version"
-            end
-        end
-    )
-    
     -- Main Frame
     mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 280, 0, 500) -- Increased height to accommodate new FOV buttons
-    mainFrame.Position = UDim2.new(0.5, -140, 0.5, -250)
+    mainFrame.Size = UDim2.new(0, 280, 0, 380)
+    mainFrame.Position = UDim2.new(0.5, -140, 0.5, -190)
     mainFrame.BackgroundColor3 = backgroundColor
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = screenGui
     mainFrame.Visible = uiVisible
     mainFrame.ClipsDescendants = true
+    mainFrame.Active = true
+    mainFrame.Draggable = true
     
     local mainCorner = Instance.new("UICorner")
     mainCorner.CornerRadius = UDim.new(0, 8)
@@ -307,9 +295,7 @@ local function initializeModernGUI()
     titleText.Size = UDim2.new(1, -10, 1, 0)
     titleText.Position = UDim2.new(0, 10, 0, 0)
     titleText.BackgroundTransparency = 1
-    titleText.Text = currentVersion == "Main" and "ZOMBIE AIMLOCK" or 
-                    (currentVersion == "OnlySniperzombie" and "ONLY SNIPERZOMBIE" or 
-                    (currentVersion == "IgnoreWraith" and "IGNORE WRAITH" or "SMART SPECIAL KILLING"))
+    titleText.Text = "SMART SPECIAL KILLING"
     titleText.TextColor3 = textColor
     titleText.Font = Enum.Font.GothamBold
     titleText.TextSize = 16
@@ -339,9 +325,9 @@ local function initializeModernGUI()
     contentScrollingFrame.Position = UDim2.new(0, 5, 0, 40)
     contentScrollingFrame.BackgroundTransparency = 1
     contentScrollingFrame.ScrollBarThickness = 6
-    contentScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 750) -- Increased to accommodate all content
+    contentScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 600)
     contentScrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-    contentScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y -- Auto-expand canvas
+    contentScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     contentScrollingFrame.Parent = mainFrame
     
     local contentLayout = Instance.new("UIListLayout")
@@ -350,6 +336,37 @@ local function initializeModernGUI()
     
     -- Adjust yPos for PC version
     local yPos = 0
+    
+    -- Guardian Settings (Moved to top)
+    local guardianRangeContainer = Instance.new("Frame")
+    guardianRangeContainer.Size = UDim2.new(1, 0, 0, 40)
+    guardianRangeContainer.Position = UDim2.new(0, 0, 0, yPos)
+    guardianRangeContainer.BackgroundTransparency = 1
+    guardianRangeContainer.Parent = contentScrollingFrame
+    
+    local guardianRangeLabel = Instance.new("TextLabel")
+    guardianRangeLabel.Size = UDim2.new(1, 0, 0, 20)
+    guardianRangeLabel.Position = UDim2.new(0, 0, 0, 0)
+    guardianRangeLabel.BackgroundTransparency = 1
+    guardianRangeLabel.Text = "Guardian Priority Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
+    guardianRangeLabel.TextColor3 = textColor
+    guardianRangeLabel.Font = Enum.Font.Gotham
+    guardianRangeLabel.TextSize = 13
+    guardianRangeLabel.TextXAlignment = Enum.TextXAlignment.Left
+    guardianRangeLabel.Parent = guardianRangeContainer
+    
+    local guardianRangeBtn = createModernButton(
+        guardianRangeContainer,
+        "Change",
+        UDim2.new(0.35, 0, 0, 25),
+        UDim2.new(0.65, 0, 0, 0),
+        function()
+            GUARDIAN_PRIORITY_RANGE = GUARDIAN_PRIORITY_RANGE == 50 and 75 or 50
+            guardianRangeLabel.Text = "Guardian Priority Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
+        end
+    )
+    
+    yPos = yPos + 45
     
     -- Add [E] to the AimLock text to indicate the keybind
     local aimlockToggle = createToggleButton(contentScrollingFrame, "AimLock [E]", yPos, aimLockActive, successColor, function(s) 
@@ -451,7 +468,7 @@ local function initializeModernGUI()
     
     yPos = yPos + 45
     
-    -- FOV Selection Buttons (NEW)
+    -- FOV Selection Buttons
     local fovSelectionContainer = Instance.new("Frame")
     fovSelectionContainer.Size = UDim2.new(1, 0, 0, 40)
     fovSelectionContainer.Position = UDim2.new(0, 0, 0, yPos)
@@ -683,37 +700,6 @@ local function initializeModernGUI()
         yPos = yPos + 45
     end
     
-    -- Smart Special Killing Settings
-    local guardianRangeContainer = Instance.new("Frame")
-    guardianRangeContainer.Size = UDim2.new(1, 0, 0, 40)
-    guardianRangeContainer.Position = UDim2.new(0, 0, 0, yPos)
-    guardianRangeContainer.BackgroundTransparency = 1
-    guardianRangeContainer.Parent = contentScrollingFrame
-    
-    local guardianRangeLabel = Instance.new("TextLabel")
-    guardianRangeLabel.Size = UDim2.new(1, 0, 0, 20)
-    guardianRangeLabel.Position = UDim2.new(0, 0, 0, 0)
-    guardianRangeLabel.BackgroundTransparency = 1
-    guardianRangeLabel.Text = "Guardian Priority Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
-    guardianRangeLabel.TextColor3 = textColor
-    guardianRangeLabel.Font = Enum.Font.Gotham
-    guardianRangeLabel.TextSize = 13
-    guardianRangeLabel.TextXAlignment = Enum.TextXAlignment.Left
-    guardianRangeLabel.Parent = guardianRangeContainer
-    
-    local guardianRangeBtn = createModernButton(
-        guardianRangeContainer,
-        "Change",
-        UDim2.new(0.35, 0, 0, 25),
-        UDim2.new(0.65, 0, 0, 0),
-        function()
-            GUARDIAN_PRIORITY_RANGE = GUARDIAN_PRIORITY_RANGE == 50 and 75 or 50
-            guardianRangeLabel.Text = "Guardian Priority Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
-        end
-    )
-    
-    yPos = yPos + 45
-    
     -- Credit label
     local creditLabel = Instance.new("TextLabel")
     creditLabel.Size = UDim2.new(1, 0, 0, 20)
@@ -790,163 +776,6 @@ local function initializeModernGUI()
                 end
             end
         end
-    end)
-end
-
--- Function to generate a random color
-local function getRandomColor()
-    return Color3.new(math.random(), math.random(), math.random())
-end
-
--- Tạo GUI lựa chọn phiên bản phía dưới GUI chính
-local function createModernVersionSelectionGUI()
-    versionFrame = Instance.new("Frame")
-    versionFrame.Size = UDim2.new(0, 200, 0, 180)
-    versionFrame.Position = UDim2.new(0.5, -100, 0.5, 50)
-    versionFrame.BackgroundColor3 = backgroundColor
-    versionFrame.BorderSizePixel = 0
-    versionFrame.Parent = screenGui
-    versionFrame.Visible = false
-    versionFrame.Active = true
-    versionFrame.Draggable = true
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = versionFrame
-    
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 25)
-    title.Position = UDim2.new(0, 0, 0, 0)
-    title.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    title.BorderSizePixel = 0
-    title.Text = "SELECT VERSION"
-    title.TextColor3 = textColor
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 12
-    title.Parent = versionFrame
-    
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 8)
-    titleCorner.Parent = title
-    
-    local buttonScrollingFrame = Instance.new("ScrollingFrame")
-    buttonScrollingFrame.Size = UDim2.new(1, -10, 1, -35)
-    buttonScrollingFrame.Position = UDim2.new(0, 5, 0, 30)
-    buttonScrollingFrame.BackgroundTransparency = 1
-    buttonScrollingFrame.ScrollBarThickness = 6
-    buttonScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 150)
-    buttonScrollingFrame.Parent = versionFrame
-    
-    local buttonLayout = Instance.new("UIListLayout")
-    buttonLayout.Padding = UDim.new(0, 5)
-    buttonLayout.Parent = buttonScrollingFrame
-    
-    -- Store button references for later updates
-    local mainBtn, sniperBtn, ignoreWraithBtn, smartSpecialBtn
-    
-    -- Generate random colors for each version
-    versionButtonColors = {
-        Main = getRandomColor(),
-        OnlySniperzombie = getRandomColor(),
-        IgnoreWraith = getRandomColor(),
-        SmartSpecialKilling = getRandomColor()
-    }
-    
-    mainBtn = createModernButton(
-        buttonScrollingFrame,
-        "Main Gui",
-        UDim2.new(1, 0, 0, 25),
-        UDim2.new(0, 0, 0, 0),
-        function()
-            currentVersion = "Main"
-            mainBtn.BackgroundColor3 = versionButtonColors.Main
-            sniperBtn.BackgroundColor3 = buttonColor
-            ignoreWraithBtn.BackgroundColor3 = buttonColor
-            smartSpecialBtn.BackgroundColor3 = buttonColor
-            
-            -- Cập nhật tiêu đề
-            if mainFrame and mainFrame:FindFirstChild("TitleBar") then
-                local titleText = mainFrame.TitleBar:FindFirstChildOfClass("TextLabel")
-                if titleText then
-                    titleText.Text = "ZOMBIE AIMLOCK"
-                end
-            end
-        end
-    )
-    mainBtn.BackgroundColor3 = currentVersion == "Main" and versionButtonColors.Main or buttonColor
-    
-    sniperBtn = createModernButton(
-        buttonScrollingFrame,
-        "Only Sniperzombie",
-        UDim2.new(1, 0, 0, 25),
-        UDim2.new(0, 0, 0, 0),
-        function()
-            currentVersion = "OnlySniperzombie"
-            sniperBtn.BackgroundColor3 = versionButtonColors.OnlySniperzombie
-            mainBtn.BackgroundColor3 = buttonColor
-            ignoreWraithBtn.BackgroundColor3 = buttonColor
-            smartSpecialBtn.BackgroundColor3 = buttonColor
-            
-            -- Cập nhật tiêu đề
-            if mainFrame and mainFrame:FindFirstChild("TitleBar") then
-                local titleText = mainFrame.TitleBar:FindFirstChildOfClass("TextLabel")
-                if titleText then
-                    titleText.Text = "ONLY SNIPERZOMBIE"
-                end
-            end
-        end
-    )
-    sniperBtn.BackgroundColor3 = currentVersion == "OnlySniperzombie" and versionButtonColors.OnlySniperzombie or buttonColor
-    
-    ignoreWraithBtn = createModernButton(
-        buttonScrollingFrame,
-        "Ignore Wraith",
-        UDim2.new(1, 0, 0, 25),
-        UDim2.new(0, 0, 0, 0),
-        function()
-            currentVersion = "IgnoreWraith"
-            ignoreWraithBtn.BackgroundColor3 = versionButtonColors.IgnoreWraith
-            mainBtn.BackgroundColor3 = buttonColor
-            sniperBtn.BackgroundColor3 = buttonColor
-            smartSpecialBtn.BackgroundColor3 = buttonColor
-            
-            -- Cập nhật tiêu đề
-            if mainFrame and mainFrame:FindFirstChild("TitleBar") then
-                local titleText = mainFrame.TitleBar:FindFirstChildOfClass("TextLabel")
-                if titleText then
-                    titleText.Text = "IGNORE WRAITH"
-                end
-            end
-        end
-    )
-    ignoreWraithBtn.BackgroundColor3 = currentVersion == "IgnoreWraith" and versionButtonColors.IgnoreWraith or buttonColor
-    
-    smartSpecialBtn = createModernButton(
-        buttonScrollingFrame,
-        "Smart Special Killing",
-        UDim2.new(1, 0, 0, 25),
-        UDim2.new(0, 0, 0, 0),
-        function()
-            currentVersion = "SmartSpecialKilling"
-            smartSpecialBtn.BackgroundColor3 = versionButtonColors.SmartSpecialKilling
-            mainBtn.BackgroundColor3 = buttonColor
-            sniperBtn.BackgroundColor3 = buttonColor
-            ignoreWraithBtn.BackgroundColor3 = buttonColor
-            
-            -- Cập nhật tiêu đề
-            if mainFrame and mainFrame:FindFirstChild("TitleBar") then
-                local titleText = mainFrame.TitleBar:FindFirstChildOfClass("TextLabel")
-                if titleText then
-                    titleText.Text = "SMART SPECIAL KILLING"
-                end
-            end
-        end
-    )
-    smartSpecialBtn.BackgroundColor3 = currentVersion == "SmartSpecialKilling" and versionButtonColors.SmartSpecialKilling or buttonColor
-    
-    -- Update canvas size
-    buttonLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        buttonScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, buttonLayout.AbsoluteContentSize.Y + 10)
     end)
 end
 
@@ -1226,6 +1055,5 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Khởi tạo GUI chính và GUI lựa chọn phiên bản
+-- Khởi tạo GUI chính
 initializeModernGUI()
-createModernVersionSelectionGUI()
