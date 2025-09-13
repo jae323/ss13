@@ -1,3 +1,6 @@
+I'll add back the version selection, change the guardian setting to have preset options (25, 50, 70 studs), move it below the FOV settings, and update the credit text. Here's the updated script:
+
+```lua
 -- Smart Special Killing Aimbot
 -- Modified from Ultimate Zombie Aimlock Script
 -- Features: GuardianZombie priority when near closest zombie, Boss ignore at 50% HP
@@ -158,7 +161,7 @@ end
 ----------------------------------------------------------------
 -- SIMPLIFIED GUI SYSTEM
 ----------------------------------------------------------------
-local mainFrame, toggleUIBtn, contentScrollingFrame
+local mainFrame, toggleUIBtn, contentScrollingFrame, versionFrame, toggleVersionBtn
 
 -- Colors
 local backgroundColor = Color3.fromRGB(30, 30, 40)
@@ -263,10 +266,24 @@ local function initializeModernGUI()
         end
     )
     
+    -- Version Toggle Button
+    toggleVersionBtn = createModernButton(
+        screenGui,
+        "Show Version",
+        UDim2.new(0, 100, 0, 30),
+        UDim2.new(0, 10, 0, 50),
+        function()
+            if versionFrame then
+                versionFrame.Visible = not versionFrame.Visible
+                toggleVersionBtn.Text = versionFrame.Visible and "Hide Version" or "Show Version"
+            end
+        end
+    )
+    
     -- Main Frame
     mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 280, 0, 380)
-    mainFrame.Position = UDim2.new(0.5, -140, 0.5, -190)
+    mainFrame.Size = UDim2.new(0, 280, 0, 420)
+    mainFrame.Position = UDim2.new(0.5, -140, 0.5, -210)
     mainFrame.BackgroundColor3 = backgroundColor
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = screenGui
@@ -295,7 +312,9 @@ local function initializeModernGUI()
     titleText.Size = UDim2.new(1, -10, 1, 0)
     titleText.Position = UDim2.new(0, 10, 0, 0)
     titleText.BackgroundTransparency = 1
-    titleText.Text = "SMART SPECIAL KILLING"
+    titleText.Text = currentVersion == "Main" and "ZOMBIE AIMLOCK" or 
+                    (currentVersion == "OnlySniperzombie" and "ONLY SNIPERZOMBIE" or 
+                    (currentVersion == "IgnoreWraith" and "IGNORE WRAITH" or "SMART SPECIAL KILLING"))
     titleText.TextColor3 = textColor
     titleText.Font = Enum.Font.GothamBold
     titleText.TextSize = 16
@@ -325,7 +344,7 @@ local function initializeModernGUI()
     contentScrollingFrame.Position = UDim2.new(0, 5, 0, 40)
     contentScrollingFrame.BackgroundTransparency = 1
     contentScrollingFrame.ScrollBarThickness = 6
-    contentScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 600)
+    contentScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 650)
     contentScrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
     contentScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     contentScrollingFrame.Parent = mainFrame
@@ -336,37 +355,6 @@ local function initializeModernGUI()
     
     -- Adjust yPos for PC version
     local yPos = 0
-    
-    -- Guardian Settings (Moved to top)
-    local guardianRangeContainer = Instance.new("Frame")
-    guardianRangeContainer.Size = UDim2.new(1, 0, 0, 40)
-    guardianRangeContainer.Position = UDim2.new(0, 0, 0, yPos)
-    guardianRangeContainer.BackgroundTransparency = 1
-    guardianRangeContainer.Parent = contentScrollingFrame
-    
-    local guardianRangeLabel = Instance.new("TextLabel")
-    guardianRangeLabel.Size = UDim2.new(1, 0, 0, 20)
-    guardianRangeLabel.Position = UDim2.new(0, 0, 0, 0)
-    guardianRangeLabel.BackgroundTransparency = 1
-    guardianRangeLabel.Text = "Guardian Priority Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
-    guardianRangeLabel.TextColor3 = textColor
-    guardianRangeLabel.Font = Enum.Font.Gotham
-    guardianRangeLabel.TextSize = 13
-    guardianRangeLabel.TextXAlignment = Enum.TextXAlignment.Left
-    guardianRangeLabel.Parent = guardianRangeContainer
-    
-    local guardianRangeBtn = createModernButton(
-        guardianRangeContainer,
-        "Change",
-        UDim2.new(0.35, 0, 0, 25),
-        UDim2.new(0.65, 0, 0, 0),
-        function()
-            GUARDIAN_PRIORITY_RANGE = GUARDIAN_PRIORITY_RANGE == 50 and 75 or 50
-            guardianRangeLabel.Text = "Guardian Priority Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
-        end
-    )
-    
-    yPos = yPos + 45
     
     -- Add [E] to the AimLock text to indicate the keybind
     local aimlockToggle = createToggleButton(contentScrollingFrame, "AimLock [E]", yPos, aimLockActive, successColor, function(s) 
@@ -618,6 +606,71 @@ local function initializeModernGUI()
     
     yPos = yPos + 50
     
+    -- Guardian Settings (Moved below FOV)
+    local guardianRangeContainer = Instance.new("Frame")
+    guardianRangeContainer.Size = UDim2.new(1, 0, 0, 40)
+    guardianRangeContainer.Position = UDim2.new(0, 0, 0, yPos)
+    guardianRangeContainer.BackgroundTransparency = 1
+    guardianRangeContainer.Parent = contentScrollingFrame
+    
+    local guardianRangeLabel = Instance.new("TextLabel")
+    guardianRangeLabel.Size = UDim2.new(1, 0, 0, 20)
+    guardianRangeLabel.Position = UDim2.new(0, 0, 0, 0)
+    guardianRangeLabel.BackgroundTransparency = 1
+    guardianRangeLabel.Text = "Guardian Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
+    guardianRangeLabel.TextColor3 = textColor
+    guardianRangeLabel.Font = Enum.Font.Gotham
+    guardianRangeLabel.TextSize = 13
+    guardianRangeLabel.TextXAlignment = Enum.TextXAlignment.Left
+    guardianRangeLabel.Parent = guardianRangeContainer
+    
+    local guardian25Btn = createModernButton(
+        guardianRangeContainer,
+        "25",
+        UDim2.new(0.3, 0, 0, 25),
+        UDim2.new(0, 0, 0, 20),
+        function()
+            GUARDIAN_PRIORITY_RANGE = 25
+            guardianRangeLabel.Text = "Guardian Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
+            guardian25Btn.BackgroundColor3 = accentColor
+            guardian50Btn.BackgroundColor3 = buttonColor
+            guardian70Btn.BackgroundColor3 = buttonColor
+        end
+    )
+    guardian25Btn.BackgroundColor3 = GUARDIAN_PRIORITY_RANGE == 25 and accentColor or buttonColor
+    
+    local guardian50Btn = createModernButton(
+        guardianRangeContainer,
+        "50",
+        UDim2.new(0.3, 0, 0, 25),
+        UDim2.new(0.35, 0, 0, 20),
+        function()
+            GUARDIAN_PRIORITY_RANGE = 50
+            guardianRangeLabel.Text = "Guardian Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
+            guardian25Btn.BackgroundColor3 = buttonColor
+            guardian50Btn.BackgroundColor3 = accentColor
+            guardian70Btn.BackgroundColor3 = buttonColor
+        end
+    )
+    guardian50Btn.BackgroundColor3 = GUARDIAN_PRIORITY_RANGE == 50 and accentColor or buttonColor
+    
+    local guardian70Btn = createModernButton(
+        guardianRangeContainer,
+        "70",
+        UDim2.new(0.3, 0, 0, 25),
+        UDim2.new(0.7, 0, 0, 20),
+        function()
+            GUARDIAN_PRIORITY_RANGE = 70
+            guardianRangeLabel.Text = "Guardian Range: " .. GUARDIAN_PRIORITY_RANGE .. " studs"
+            guardian25Btn.BackgroundColor3 = buttonColor
+            guardian50Btn.BackgroundColor3 = buttonColor
+            guardian70Btn.BackgroundColor3 = accentColor
+        end
+    )
+    guardian70Btn.BackgroundColor3 = GUARDIAN_PRIORITY_RANGE == 70 and accentColor or buttonColor
+    
+    yPos = yPos + 45
+    
     -- Hitbox Selection
     local hitboxContainer = Instance.new("Frame")
     hitboxContainer.Size = UDim2.new(1, 0, 0, 40)
@@ -705,7 +758,7 @@ local function initializeModernGUI()
     creditLabel.Size = UDim2.new(1, 0, 0, 20)
     creditLabel.Position = UDim2.new(0, 0, 0, yPos)
     creditLabel.BackgroundTransparency = 1
-    creditLabel.Text = "Smart Special Killing v1.0"
+    creditLabel.Text = "Made by Jae"
     creditLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
     creditLabel.Font = Enum.Font.Gotham
     creditLabel.TextSize = 11
@@ -779,6 +832,163 @@ local function initializeModernGUI()
     end)
 end
 
+-- Function to generate a random color
+local function getRandomColor()
+    return Color3.new(math.random(), math.random(), math.random())
+end
+
+-- Tạo GUI lựa chọn phiên bản phía dưới GUI chính
+local function createModernVersionSelectionGUI()
+    versionFrame = Instance.new("Frame")
+    versionFrame.Size = UDim2.new(0, 200, 0, 180)
+    versionFrame.Position = UDim2.new(0.5, -100, 0.5, 50)
+    versionFrame.BackgroundColor3 = backgroundColor
+    versionFrame.BorderSizePixel = 0
+    versionFrame.Parent = screenGui
+    versionFrame.Visible = false
+    versionFrame.Active = true
+    versionFrame.Draggable = true
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = versionFrame
+    
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 25)
+    title.Position = UDim2.new(0, 0, 0, 0)
+    title.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    title.BorderSizePixel = 0
+    title.Text = "SELECT VERSION"
+    title.TextColor3 = textColor
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 12
+    title.Parent = versionFrame
+    
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 8)
+    titleCorner.Parent = title
+    
+    local buttonScrollingFrame = Instance.new("ScrollingFrame")
+    buttonScrollingFrame.Size = UDim2.new(1, -10, 1, -35)
+    buttonScrollingFrame.Position = UDim2.new(0, 5, 0, 30)
+    buttonScrollingFrame.BackgroundTransparency = 1
+    buttonScrollingFrame.ScrollBarThickness = 6
+    buttonScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 150)
+    buttonScrollingFrame.Parent = versionFrame
+    
+    local buttonLayout = Instance.new("UIListLayout")
+    buttonLayout.Padding = UDim.new(0, 5)
+    buttonLayout.Parent = buttonScrollingFrame
+    
+    -- Store button references for later updates
+    local mainBtn, sniperBtn, ignoreWraithBtn, smartSpecialBtn
+    
+    -- Generate random colors for each version
+    versionButtonColors = {
+        Main = getRandomColor(),
+        OnlySniperzombie = getRandomColor(),
+        IgnoreWraith = getRandomColor(),
+        SmartSpecialKilling = getRandomColor()
+    }
+    
+    mainBtn = createModernButton(
+        buttonScrollingFrame,
+        "Main Gui",
+        UDim2.new(1, 0, 0, 25),
+        UDim2.new(0, 0, 0, 0),
+        function()
+            currentVersion = "Main"
+            mainBtn.BackgroundColor3 = versionButtonColors.Main
+            sniperBtn.BackgroundColor3 = buttonColor
+            ignoreWraithBtn.BackgroundColor3 = buttonColor
+            smartSpecialBtn.BackgroundColor3 = buttonColor
+            
+            -- Cập nhật tiêu đề
+            if mainFrame and mainFrame:FindFirstChild("TitleBar") then
+                local titleText = mainFrame.TitleBar:FindFirstChildOfClass("TextLabel")
+                if titleText then
+                    titleText.Text = "ZOMBIE AIMLOCK"
+                end
+            end
+        end
+    )
+    mainBtn.BackgroundColor3 = currentVersion == "Main" and versionButtonColors.Main or buttonColor
+    
+    sniperBtn = createModernButton(
+        buttonScrollingFrame,
+        "Only Sniperzombie",
+        UDim2.new(1, 0, 0, 25),
+        UDim2.new(0, 0, 0, 0),
+        function()
+            currentVersion = "OnlySniperzombie"
+            sniperBtn.BackgroundColor3 = versionButtonColors.OnlySniperzombie
+            mainBtn.BackgroundColor3 = buttonColor
+            ignoreWraithBtn.BackgroundColor3 = buttonColor
+            smartSpecialBtn.BackgroundColor3 = buttonColor
+            
+            -- Cập nhật tiêu đề
+            if mainFrame and mainFrame:FindFirstChild("TitleBar") then
+                local titleText = mainFrame.TitleBar:FindFirstChildOfClass("TextLabel")
+                if titleText then
+                    titleText.Text = "ONLY SNIPERZOMBIE"
+                end
+            end
+        end
+    )
+    sniperBtn.BackgroundColor3 = currentVersion == "OnlySniperzombie" and versionButtonColors.OnlySniperzombie or buttonColor
+    
+    ignoreWraithBtn = createModernButton(
+        buttonScrollingFrame,
+        "Ignore Wraith",
+        UDim2.new(1, 0, 0, 25),
+        UDim2.new(0, 0, 0, 0),
+        function()
+            currentVersion = "IgnoreWraith"
+            ignoreWraithBtn.BackgroundColor3 = versionButtonColors.IgnoreWraith
+            mainBtn.BackgroundColor3 = buttonColor
+            sniperBtn.BackgroundColor3 = buttonColor
+            smartSpecialBtn.BackgroundColor3 = buttonColor
+            
+            -- Cập nhật tiêu đề
+            if mainFrame and mainFrame:FindFirstChild("TitleBar") then
+                local titleText = mainFrame.TitleBar:FindFirstChildOfClass("TextLabel")
+                if titleText then
+                    titleText.Text = "IGNORE WRAITH"
+                end
+            end
+        end
+    )
+    ignoreWraithBtn.BackgroundColor3 = currentVersion == "IgnoreWraith" and versionButtonColors.IgnoreWraith or buttonColor
+    
+    smartSpecialBtn = createModernButton(
+        buttonScrollingFrame,
+        "Smart Special Killing",
+        UDim2.new(1, 0, 0, 25),
+        UDim2.new(0, 0, 0, 0),
+        function()
+            currentVersion = "SmartSpecialKilling"
+            smartSpecialBtn.BackgroundColor3 = versionButtonColors.SmartSpecialKilling
+            mainBtn.BackgroundColor3 = buttonColor
+            sniperBtn.BackgroundColor3 = buttonColor
+            ignoreWraithBtn.BackgroundColor3 = buttonColor
+            
+            -- Cập nhật tiêu đề
+            if mainFrame and mainFrame:FindFirstChild("TitleBar") then
+                local titleText = mainFrame.TitleBar:FindFirstChildOfClass("TextLabel")
+                if titleText then
+                    titleText.Text = "SMART SPECIAL KILLING"
+                end
+            end
+        end
+    )
+    smartSpecialBtn.BackgroundColor3 = currentVersion == "SmartSpecialKilling" and versionButtonColors.SmartSpecialKilling or buttonColor
+    
+    -- Update canvas size
+    buttonLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        buttonScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, buttonLayout.AbsoluteContentSize.Y + 10)
+    end)
+end
+
 ----------------------------------------------------------------
 -- ESP FUNCTIONS
 ----------------------------------------------------------------
@@ -818,242 +1028,5 @@ local function createESP(zombie)
             textLabel.Text = zombie.Name
             textLabel.TextColor3 = Color3.new(1, 1, 1)
             textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-            textLabel.TextStrokeTransparency = 0
-            textLabel.TextSize = 14
-            textLabel.Font = Enum.Font.GothamBold
-            textLabel.Parent = nameLabel
-            
-            table.insert(espObjects, nameLabel)
-        end
-        
-        table.insert(espObjects, highlight)
-    end
-end
-
-local function updateESP()
-    clearESP()
-    if espVisible then
-        for _, z in ipairs(zombiesFolder:GetChildren()) do
-            createESP(z)
-        end
-    end
-end
-
-zombiesFolder.ChildAdded:Connect(function(child)
-    if espVisible then
-        task.wait(0.1)
-        createESP(child)
-    end
-end)
-
-----------------------------------------------------------------
--- SMOOTH AIMING FUNCTIONS
-----------------------------------------------------------------
-local function smoothAim(targetPosition)
-    if not smoothAimEnabled then
-        camera.CFrame = CFrame.new(camera.CFrame.Position, targetPosition)
-        lastCameraCFrame = camera.CFrame
-        return
-    end
-    
-    local currentPosition = camera.CFrame.Position
-    local targetLookVector = (targetPosition - currentPosition).Unit
-    local targetCFrame = CFrame.new(currentPosition, currentPosition + targetLookVector)
-    
-    -- Apply smoothness
-    local smoothFactor = 1 / smoothnessAmount
-    local newCFrame = lastCameraCFrame:Lerp(targetCFrame, smoothFactor)
-    
-    camera.CFrame = newCFrame
-    lastCameraCFrame = newCFrame
-end
-
-----------------------------------------------------------------
--- AIMBOT FUNCTIONS (MODIFIED - Version-specific targeting logic)
-----------------------------------------------------------------
-local function getClosestZombieInFOV()
-    local closestZombie = nil
-    local closestDistance = math.huge
-    local screenCenter = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
-    
-    -- First pass: Find the closest zombie in FOV
-    for _, zombie in ipairs(zombiesFolder:GetChildren()) do
-        if zombie:IsA("Model") then
-            -- Skip boss zombies that should be ignored (Smart Special Killing only)
-            if currentVersion == "SmartSpecialKilling" and isBossZombie(zombie) and shouldIgnoreBoss(zombie) then
-                continue
-            end
-            
-            local part = zombie:FindFirstChild(aimPartName)
-            if part then
-                local targetPosition = part.Position
-                local screenPos, onScreen = camera:WorldToViewportPoint(targetPosition)
-                
-                if onScreen then
-                    local screenDistance = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
-                    local worldDistance = (targetPosition - camera.CFrame.Position).Magnitude
-                    
-                    if screenDistance <= aimFOV and worldDistance < closestDistance then
-                        -- MODIFIED: Version-specific targeting logic
-                        if currentVersion == "OnlySniperzombie" and not isSniperZombie(zombie) then
-                            -- Skip non-sniper zombies in OnlySniperzombie mode
-                        elseif currentVersion == "IgnoreWraith" and isWraithZombie(zombie) then
-                            -- Skip Wraith zombies in IgnoreWraith mode
-                        else
-                            local visible = true
-                            if wallCheckEnabled then
-                                local raycastParams = RaycastParams.new()
-                                raycastParams.FilterDescendantsInstances = {player.Character, camera}
-                                raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-                                raycastParams.IgnoreWater = true
-                                
-                                local rayDirection = (targetPosition - camera.CFrame.Position)
-                                local result = workspace:Raycast(
-                                    camera.CFrame.Position,
-                                    rayDirection.Unit * rayDirection.Magnitude,
-                                    raycastParams
-                                )
-                                
-                                if result then
-                                    local hitPart = result.Instance
-                                    visible = hitPart and (hitPart:IsDescendantOf(zombie) or hitPart == part)
-                                end
-                            end
-                            
-                            if visible then
-                                closestDistance = worldDistance
-                                closestZombie = zombie
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-    
-    -- Second pass for Smart Special Killing: Check for GuardianZombies near the closest zombie
-    if currentVersion == "SmartSpecialKilling" and closestZombie then
-        local closestZombiePos = closestZombie:FindFirstChild(aimPartName).Position
-        local guardianZombie = nil
-        local guardianDistance = math.huge
-        
-        for _, zombie in ipairs(zombiesFolder:GetChildren()) do
-            if zombie:IsA("Model") and isGuardianZombie(zombie) then
-                local part = zombie:FindFirstChild(aimPartName)
-                if part then
-                    local targetPosition = part.Position
-                    local screenPos, onScreen = camera:WorldToViewportPoint(targetPosition)
-                    
-                    if onScreen then
-                        local screenDistance = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
-                        local worldDistance = (targetPosition - closestZombiePos).Magnitude
-                        
-                        -- Check if this GuardianZombie is within priority range of the closest zombie
-                        if worldDistance <= GUARDIAN_PRIORITY_RANGE and screenDistance <= aimFOV then
-                            if worldDistance < guardianDistance then
-                                guardianDistance = worldDistance
-                                guardianZombie = zombie
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        
-        -- If we found a GuardianZombie near the closest zombie, prioritize it
-        if guardianZombie then
-            return guardianZombie
-        end
-    end
-    
-    return closestZombie
-end
-
-----------------------------------------------------------------
--- HITBOX FUNCTIONS
-----------------------------------------------------------------
-local function expandHeadHitbox(zombie)
-    if zombie:IsA("Model") and zombie:FindFirstChild("Head") then
-        local head = zombie.Head
-        if head:IsA("BasePart") then
-            if not head:FindFirstChild("OriginalSize") then
-                local originalSize = Instance.new("Vector3Value")
-                originalSize.Name = "OriginalSize"
-                originalSize.Value = head.Size
-                originalSize.Parent = head
-            end
-            
-            head.Size = Vector3.new(5, 5, 5)
-            head.CanCollide = false
-            head.Material = Enum.Material.ForceField
-        end
-    end
-end
-
-local function resetHeadHitbox(zombie)
-    if zombie:IsA("Model") and zombie:FindFirstChild("Head") then
-        local head = zombie.Head
-        if head:IsA("BasePart") then
-            if head:FindFirstChild("OriginalSize") then
-                head.Size = head.OriginalSize.Value
-                head.CanCollide = true
-                head.Material = Enum.Material.Plastic
-                head.OriginalSize:Destroy()
-            else
-                head.Size = Vector3.new(1, 1, 1)
-                head.CanCollide = true
-                head.Material = Enum.Material.Plastic
-            end
-        end
-    end
-end
-
-local function updateAllZombies()
-    for _, zombie in ipairs(zombiesFolder:GetChildren()) do
-        if hitboxEnabled then
-            expandHeadHitbox(zombie)
-        else
-            resetHeadHitbox(zombie)
-        end
-    end
-end
-
-zombiesFolder.ChildAdded:Connect(function(zombie)
-    task.wait(0.2)
-    if hitboxEnabled then
-        expandHeadHitbox(zombie)
-    end
-end)
-
--- Initialize hitboxes
-updateAllZombies()
-
-----------------------------------------------------------------
--- MAIN LOOP (MODIFIED - Version-specific logic)
-----------------------------------------------------------------
-RunService.RenderStepped:Connect(function()
-    -- Update FOV circle position and size
-    updateFOVCircle()
-    
-    -- Clean up boss timers (Smart Special Killing only)
-    if currentVersion == "SmartSpecialKilling" then
-        cleanupBossTimers()
-    end
-    
-    -- Aimlock logic
-    if aimLockActive then
-        local targetZombie = getClosestZombieInFOV()
-        if targetZombie then
-            local targetPart = targetZombie[aimPartName]
-            if targetPart then
-                local targetPosition = targetPart.Position
-                
-                -- Use smooth aiming
-                smoothAim(targetPosition)
-            end
-        end
-    end
-end)
-
--- Khởi tạo GUI chính
-initializeModernGUI()
+           
+```
