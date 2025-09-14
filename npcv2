@@ -1,4 +1,4 @@
---// SMART SPECIAL KILLING AIM LOCK SCRIPT WITH FOV + GUI SYSTEM + WALL CHECK + HITBOX //--
+--// SMART SPECIAL KILLING AIM LOCK SCRIPT WITH FOV + GUI SYSTEM + WALL CHECK + HITBOX + VERSION SELECTION //--
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -21,6 +21,11 @@ local espVisible = false
 local wallCheckEnabled = true
 local hitboxEnabled = false
 
+-- NEW: Version system
+local currentVersion = "Main" -- "Main", "OnlySniper", "IgnoreWraith", "SmartSpecialKilling"
+local versionButtonColors = {}
+local versionFrameVisible = false
+
 -- NEW: Smart Special Killing variables
 local GUARDIAN_PRIORITY_RANGE = 50 -- Distance to prioritize GuardianZombie when near closest zombie
 local BOSS_IGNORE_HP_THRESHOLD = 0.5 -- 50% HP
@@ -41,15 +46,16 @@ local aimbindKey = Enum.KeyCode.Q -- Default keybind for PC
 local waitingForKeybind = false
 
 ----------------------------------------------------------------
--- GUI SYSTEM (KEEPING THE ORIGINAL STYLE)
+-- GUI SYSTEM
 ----------------------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AimLockGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
+-- Main Frame
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 260, 0, 520) -- Increased height for new features
+mainFrame.Size = UDim2.new(0, 260, 0, 520)
 mainFrame.Position = UDim2.new(0.5, -130, 0.5, -85)
 mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 mainFrame.BorderSizePixel = 0
@@ -247,6 +253,17 @@ smoothness25Btn.TextColor3 = Color3.new(1,1,1)
 smoothness25Btn.Font = Enum.Font.SourceSansBold
 smoothness25Btn.TextSize = 16
 
+-- Version Selection Button (outside main frame)
+local versionSelectBtn = Instance.new("TextButton")
+versionSelectBtn.Size = UDim2.new(0, 120, 0, 40)
+versionSelectBtn.Position = UDim2.new(0, 10, 0, 60)
+versionSelectBtn.BackgroundColor3 = Color3.fromRGB(150, 100, 200)
+versionSelectBtn.Text = "Select Version"
+versionSelectBtn.Parent = screenGui
+versionSelectBtn.TextColor3 = Color3.new(1,1,1)
+versionSelectBtn.Font = Enum.Font.SourceSansBold
+versionSelectBtn.TextSize = 16
+
 -- UI Toggle Handler
 toggleUIBtn.MouseButton1Click:Connect(function()
     uiVisible = not uiVisible
@@ -312,6 +329,161 @@ smoothness25Btn.MouseButton1Click:Connect(function()
     smoothness20Btn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
     smoothness25Btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 end)
+
+----------------------------------------------------------------
+-- VERSION SELECTION GUI (RIÊNG BIỆT)
+----------------------------------------------------------------
+local versionFrame
+
+local function createVersionSelectionGUI()
+    versionFrame = Instance.new("Frame")
+    versionFrame.Size = UDim2.new(0, 260, 0, 180)
+    versionFrame.Position = UDim2.new(0.5, -130, 0.5, 100)
+    versionFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    versionFrame.BorderSizePixel = 0
+    versionFrame.Parent = screenGui
+    versionFrame.Visible = false
+    versionFrame.Active = true
+    versionFrame.Draggable = true
+    
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.Position = UDim2.new(0, 0, 0, 0)
+    title.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    title.BorderSizePixel = 0
+    title.Text = "SELECT AIMBOT VERSION"
+    title.TextColor3 = Color3.new(1,1,1)
+    title.Font = Enum.Font.SourceSansBold
+    title.TextSize = 16
+    title.Parent = versionFrame
+    
+    -- Function to generate a random color
+    local function getRandomColor()
+        return Color3.new(math.random(), math.random(), math.random())
+    end
+    
+    -- Generate random colors for each version
+    versionButtonColors = {
+        Main = getRandomColor(),
+        OnlySniper = getRandomColor(),
+        IgnoreWraith = getRandomColor(),
+        SmartSpecialKilling = getRandomColor()
+    }
+    
+    -- Main Version Button
+    local mainBtn = Instance.new("TextButton")
+    mainBtn.Size = UDim2.new(0.9, 0, 0, 30)
+    mainBtn.Position = UDim2.new(0.05, 0, 0, 40)
+    mainBtn.BackgroundColor3 = currentVersion == "Main" and versionButtonColors.Main or Color3.fromRGB(90, 90, 90)
+    mainBtn.Text = "Main Version - Aim all zombies"
+    mainBtn.Parent = versionFrame
+    mainBtn.TextColor3 = Color3.new(1,1,1)
+    mainBtn.Font = Enum.Font.SourceSansBold
+    mainBtn.TextSize = 14
+    
+    -- Only Sniper Version Button
+    local sniperBtn = Instance.new("TextButton")
+    sniperBtn.Size = UDim2.new(0.9, 0, 0, 30)
+    sniperBtn.Position = UDim2.new(0.05, 0, 0, 80)
+    sniperBtn.BackgroundColor3 = currentVersion == "OnlySniper" and versionButtonColors.OnlySniper or Color3.fromRGB(90, 90, 90)
+    sniperBtn.Text = "Sniper Only - Aim only sniper zombies"
+    sniperBtn.Parent = versionFrame
+    sniperBtn.TextColor3 = Color3.new(1,1,1)
+    sniperBtn.Font = Enum.Font.SourceSansBold
+    sniperBtn.TextSize = 14
+    
+    -- Ignore Wraith Version Button
+    local ignoreWraithBtn = Instance.new("TextButton")
+    ignoreWraithBtn.Size = UDim2.new(0.9, 0, 0, 30)
+    ignoreWraithBtn.Position = UDim2.new(0.05, 0, 0, 120)
+    ignoreWraithBtn.BackgroundColor3 = currentVersion == "IgnoreWraith" and versionButtonColors.IgnoreWraith or Color3.fromRGB(90, 90, 90)
+    ignoreWraithBtn.Text = "Ignore Wraith - Skip wraith zombies"
+    ignoreWraithBtn.Parent = versionFrame
+    ignoreWraithBtn.TextColor3 = Color3.new(1,1,1)
+    ignoreWraithBtn.Font = Enum.Font.SourceSansBold
+    ignoreWraithBtn.TextSize = 14
+    
+    -- Smart Special Killing Version Button
+    local smartSpecialBtn = Instance.new("TextButton")
+    smartSpecialBtn.Size = UDim2.new(0.9, 0, 0, 30)
+    smartSpecialBtn.Position = UDim2.new(0.05, 0, 0, 160)
+    smartSpecialBtn.BackgroundColor3 = currentVersion == "SmartSpecialKilling" and versionButtonColors.SmartSpecialKilling or Color3.fromRGB(90, 90, 90)
+    smartSpecialBtn.Text = "Smart Kill - Priority system"
+    smartSpecialBtn.Parent = versionFrame
+    smartSpecialBtn.TextColor3 = Color3.new(1,1,1)
+    smartSpecialBtn.Font = Enum.Font.SourceSansBold
+    smartSpecialBtn.TextSize = 14
+    
+    -- Version Button Handlers
+    mainBtn.MouseButton1Click:Connect(function()
+        currentVersion = "Main"
+        mainBtn.BackgroundColor3 = versionButtonColors.Main
+        sniperBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+        ignoreWraithBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+        smartSpecialBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+        versionFrame.Visible = false
+    end)
+    
+    sniperBtn.MouseButton1Click:Connect(function()
+        currentVersion = "OnlySniper"
+        mainBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+        sniperBtn.BackgroundColor3 = versionButtonColors.OnlySniper
+        ignoreWraithBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+        smartSpecialBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+        versionFrame.Visible = false
+    end)
+    
+    ignoreWraithBtn.MouseButton1Click:Connect(function()
+        currentVersion = "IgnoreWraith"
+        mainBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+        sniperBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+        ignoreWraithBtn.BackgroundColor3 = versionButtonColors.IgnoreWraith
+        smartSpecialBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+        versionFrame.Visible = false
+    end)
+    
+    smartSpecialBtn.MouseButton1Click:Connect(function()
+        currentVersion = "SmartSpecialKilling"
+        mainBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+        sniperBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+        ignoreWraithBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+        smartSpecialBtn.BackgroundColor3 = versionButtonColors.SmartSpecialKilling
+        versionFrame.Visible = false
+    end)
+    
+    -- Version Select Button Handler
+    versionSelectBtn.MouseButton1Click:Connect(function()
+        versionFrame.Visible = not versionFrame.Visible
+    end)
+    
+    -- Close button
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 25, 0, 25)
+    closeBtn.Position = UDim2.new(0.95, -25, 0, 2)
+    closeBtn.BackgroundTransparency = 1
+    closeBtn.Text = "X"
+    closeBtn.TextColor3 = Color3.new(1,1,1)
+    closeBtn.Font = Enum.Font.SourceSansBold
+    closeBtn.TextSize = 16
+    closeBtn.Parent = versionFrame
+    
+    closeBtn.MouseButton1Click:Connect(function()
+        versionFrame.Visible = false
+    end)
+end
+
+createVersionSelectionGUI()
+
+----------------------------------------------------------------
+-- SPECIAL ZOMBIE IDENTIFICATION FUNCTIONS
+----------------------------------------------------------------
+local function isSniperZombie(zombie)
+    return zombie.Name:lower():find("sniper") or zombie.Name:lower():find("shooter")
+end
+
+local function isWraithZombie(zombie)
+    return zombie.Name:lower():find("wraith")
+end
 
 ----------------------------------------------------------------
 -- SMART SPECIAL KILLING FUNCTIONS (NEW)
@@ -441,7 +613,7 @@ local function smoothAim(targetPosition)
 end
 
 ----------------------------------------------------------------
--- AIMBOT + WALL CHECK FUNCTIONS (UPDATED)
+-- AIMBOT + WALL CHECK FUNCTIONS (UPDATED WITH VERSION LOGIC)
 ----------------------------------------------------------------
 local function isVisible(targetPart)
     local origin = camera.CFrame.Position
@@ -462,8 +634,12 @@ local function getClosestZombieInFOV()
 
     for _, zombie in ipairs(zombiesFolder:GetChildren()) do
         if zombie:IsA("Model") and zombie:FindFirstChild(aimPartName) then
-            -- Skip boss zombies that should be ignored
-            if isBossZombie(zombie) and shouldIgnoreBoss(zombie) then
+            -- Version-specific filtering
+            if currentVersion == "OnlySniper" and not isSniperZombie(zombie) then
+                continue
+            elseif currentVersion == "IgnoreWraith" and isWraithZombie(zombie) then
+                continue
+            elseif currentVersion == "SmartSpecialKilling" and isBossZombie(zombie) and shouldIgnoreBoss(zombie) then
                 continue
             end
             
@@ -483,8 +659,8 @@ local function getClosestZombieInFOV()
         end
     end
 
-    -- Second pass: Check for GuardianZombies near the closest zombie
-    if closestZombie then
+    -- Second pass for Smart Special Killing: Check for GuardianZombies near the closest zombie
+    if currentVersion == "SmartSpecialKilling" and closestZombie then
         local closestZombiePos = closestZombie:FindFirstChild(aimPartName).Position
         local guardianZombie = nil
         local guardianDistance = math.huge
@@ -519,7 +695,7 @@ local function getClosestZombieInFOV()
 end
 
 ----------------------------------------------------------------
--- HITBOX EXPANDER FUNCTIONS
+-- HITBOX EXPANDER FUNCTIONS (UPDATED FOR SNIPER ZOMBIES - 4x4x4)
 ----------------------------------------------------------------
 local function expandHeadHitbox(zombie)
     if zombie:IsA("Model") and zombie:FindFirstChild("Head") then
@@ -532,7 +708,13 @@ local function expandHeadHitbox(zombie)
                 originalSize.Parent = head
             end
             
-            head.Size = Vector3.new(5, 5, 5)
+            -- Make hitbox 4x4x4 for sniper zombies
+            if isSniperZombie(zombie) then
+                head.Size = Vector3.new(4, 4, 4) -- 4x4x4 hitbox for sniper zombies
+            else
+                head.Size = Vector3.new(5, 5, 5) -- Normal hitbox for other zombies
+            end
+            
             head.Transparency = 0.5
             head.CanCollide = false
             head.Material = Enum.Material.ForceField
@@ -585,7 +767,7 @@ zombiesFolder.ChildAdded:Connect(function(zombie)
 end)
 
 ----------------------------------------------------------------
--- MAIN LOOP (UPDATED)
+-- MAIN LOOP (UPDATED WITH SNIPER AIM OFFSET)
 ----------------------------------------------------------------
 RunService.RenderStepped:Connect(function()
     if draggingSlider then
@@ -603,13 +785,22 @@ RunService.RenderStepped:Connect(function()
     fovCircle.Visible = fovVisible
     
     -- Clean up boss timers
-    cleanupBossTimers()
+    if currentVersion == "SmartSpecialKilling" then
+        cleanupBossTimers()
+    end
 
     if aimLockActive then
         local closestZombie = getClosestZombieInFOV()
         if closestZombie then
             local targetPart = closestZombie[aimPartName]
-            smoothAim(targetPart.Position)
+            local targetPosition = targetPart.Position
+            
+            -- Aim slightly higher for sniper zombies
+            if isSniperZombie(closestZombie) then
+                targetPosition = targetPosition + Vector3.new(0, 0.5, 0) -- Aim higher for sniper zombies
+            end
+            
+            smoothAim(targetPosition)
         end
     end
 end)
