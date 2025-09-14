@@ -1,4 +1,4 @@
---// SMART SPECIAL KILLING AIM LOCK SCRIPT WITH FOV + GUI SYSTEM + WALL CHECK + HITBOX + VERSION SELECTION //--
+--// SMART SPECIAL KILLING AIM LOCK SCRIPT WITH FOV + CLASSIC GUI SYSTEM + WALL CHECK + HITBOX + VERSION SELECTION //--
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -45,76 +45,402 @@ local isPC = UserInputService:GetPlatform() == Enum.Platform.Windows
 local aimbindKey = Enum.KeyCode.Q -- Default keybind for PC
 local waitingForKeybind = false
 
+-- Classic color scheme
+local colors = {
+    background = Color3.fromRGB(45, 45, 55),
+    header = Color3.fromRGB(60, 60, 70),
+    accent = Color3.fromRGB(0, 120, 215),
+    text = Color3.fromRGB(240, 240, 240),
+    button = Color3.fromRGB(65, 65, 75),
+    buttonHover = Color3.fromRGB(75, 75, 85),
+    toggleOff = Color3.fromRGB(100, 100, 110),
+    toggleOn = Color3.fromRGB(0, 180, 80),
+    sliderTrack = Color3.fromRGB(80, 80, 90),
+    sliderFill = Color3.fromRGB(0, 140, 235),
+    border = Color3.fromRGB(30, 30, 40)
+}
+
+-- Dynamic ESP colors for different zombie types
+local espColors = {
+    normal = Color3.fromRGB(255, 50, 50),      -- Red for normal zombies
+    sniper = Color3.fromRGB(50, 255, 50),      -- Green for sniper zombies
+    wraith = Color3.fromRGB(255, 50, 255),     -- Pink for wraith zombies
+    boss = Color3.fromRGB(255, 165, 0),        -- Orange for boss zombies
+    guardian = Color3.fromRGB(0, 191, 255)     -- Blue for guardian zombies
+}
+
 ----------------------------------------------------------------
--- GUI SYSTEM
+-- CLASSIC GUI SYSTEM WITH SCROLL
 ----------------------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AimLockGui"
+screenGui.Name = "ClassicAimLockGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Main Frame
+-- Main Container Frame
+local mainContainer = Instance.new("Frame")
+mainContainer.Size = UDim2.new(0, 300, 0, 400)
+mainContainer.Position = UDim2.new(0.5, -150, 0.5, -200)
+mainContainer.BackgroundTransparency = 1
+mainContainer.Parent = screenGui
+
+-- Classic frame with border
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 260, 0, 520)
-mainFrame.Position = UDim2.new(0.5, -130, 0.5, -85)
-mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-mainFrame.BorderSizePixel = 0
-mainFrame.Parent = screenGui
-mainFrame.Active = true
-mainFrame.Draggable = true
+mainFrame.Size = UDim2.new(1, 0, 1, 0)
+mainFrame.Position = UDim2.new(0, 0, 0, 0)
+mainFrame.BackgroundColor3 = colors.background
+mainFrame.BorderSizePixel = 1
+mainFrame.BorderColor3 = colors.border
+mainFrame.Parent = mainContainer
 
--- Toggle AimLock Button
-local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(0, 200, 0, 40)
-toggleButton.Position = UDim2.new(0, 30, 0, 10)
-toggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-toggleButton.Text = "AimLock Off"
-toggleButton.Parent = mainFrame
-toggleButton.TextColor3 = Color3.new(1,1,1)
-toggleButton.Font = Enum.Font.SourceSansBold
-toggleButton.TextSize = 20
+-- Header
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 30)
+header.Position = UDim2.new(0, 0, 0, 0)
+header.BackgroundColor3 = colors.header
+header.BorderSizePixel = 1
+header.BorderColor3 = colors.border
+header.Parent = mainFrame
 
-toggleButton.MouseButton1Click:Connect(function()
-    aimLockActive = not aimLockActive
-    toggleButton.Text = aimLockActive and "AimLock On" or "AimLock Off"
-    toggleButton.BackgroundColor3 = aimLockActive and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -40, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "ZOMBIE AIMBOT"
+title.TextColor3 = colors.text
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 16
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+-- Close button
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 25, 0, 25)
+closeBtn.Position = UDim2.new(1, -30, 0, 2)
+closeBtn.BackgroundTransparency = 1
+closeBtn.Text = "X"
+closeBtn.TextColor3 = colors.text
+closeBtn.Font = Enum.Font.SourceSansBold
+closeBtn.TextSize = 16
+closeBtn.Parent = header
+
+closeBtn.MouseButton1Click:Connect(function()
+    uiVisible = false
+    mainContainer.Visible = false
 end)
 
--- FOV Controls
-local fovLabel = Instance.new("TextLabel")
-fovLabel.Size = UDim2.new(0, 200, 0, 25)
-fovLabel.Position = UDim2.new(0, 30, 0, 60)
-fovLabel.BackgroundTransparency = 1
-fovLabel.TextColor3 = Color3.new(1,1,1)
-fovLabel.Text = "Aim FOV: " .. aimFOV
-fovLabel.Font = Enum.Font.SourceSans
-fovLabel.TextSize = 18
-fovLabel.Parent = mainFrame
+-- Scrolling Frame for Main GUI
+local mainScrollingFrame = Instance.new("ScrollingFrame")
+mainScrollingFrame.Size = UDim2.new(1, -10, 1, -40)
+mainScrollingFrame.Position = UDim2.new(0, 5, 0, 35)
+mainScrollingFrame.BackgroundTransparency = 1
+mainScrollingFrame.ScrollBarThickness = 8
+mainScrollingFrame.ScrollBarImageColor3 = colors.accent
+mainScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 650)
+mainScrollingFrame.Parent = mainFrame
 
-local slider = Instance.new("TextButton")
-slider.Size = UDim2.new(0, 200, 0, 20)
-slider.Position = UDim2.new(0, 30, 0, 90)
-slider.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-slider.Text = ""
-slider.Parent = mainFrame
+local contentLayout = Instance.new("UIListLayout")
+contentLayout.Padding = UDim.new(0, 8)
+contentLayout.Parent = mainScrollingFrame
+
+-- Classic button creation function
+local function createClassicButton(parent, text, size, callback)
+    local button = Instance.new("TextButton")
+    button.Size = size
+    button.BackgroundColor3 = colors.button
+    button.BorderSizePixel = 1
+    button.BorderColor3 = colors.border
+    button.Text = text
+    button.TextColor3 = colors.text
+    button.Font = Enum.Font.SourceSans
+    button.TextSize = 14
+    button.AutoButtonColor = false
+    button.Parent = parent
+    
+    -- Hover effect
+    button.MouseEnter:Connect(function()
+        button.BackgroundColor3 = colors.buttonHover
+    end)
+    
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = colors.button
+    end)
+    
+    button.MouseButton1Click:Connect(callback)
+    
+    return button
+end
+
+-- Classic toggle button creation function
+local function createClassicToggle(parent, text, defaultState, callback)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 0, 30)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.7, 0, 1, 0)
+    label.Position = UDim2.new(0, 0, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = colors.text
+    label.Font = Enum.Font.SourceSans
+    label.TextSize = 14
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = container
+    
+    local toggle = Instance.new("TextButton")
+    toggle.Size = UDim2.new(0.25, 0, 0.7, 0)
+    toggle.Position = UDim2.new(0.75, 0, 0.15, 0)
+    toggle.BackgroundColor3 = defaultState and colors.toggleOn or colors.toggleOff
+    toggle.BorderSizePixel = 1
+    toggle.BorderColor3 = colors.border
+    toggle.Text = defaultState and "ON" or "OFF"
+    toggle.TextColor3 = colors.text
+    toggle.Font = Enum.Font.SourceSansBold
+    toggle.TextSize = 12
+    toggle.AutoButtonColor = false
+    toggle.Parent = container
+    
+    toggle.MouseButton1Click:Connect(function()
+        local newState = not defaultState
+        defaultState = newState
+        toggle.BackgroundColor3 = newState and colors.toggleOn or colors.toggleOff
+        toggle.Text = newState and "ON" or "OFF"
+        callback(newState)
+    end)
+    
+    return toggle
+end
+
+-- Create UI elements with classic design
+local aimlockToggle = createClassicToggle(mainScrollingFrame, "AimLock", aimLockActive, function(state)
+    aimLockActive = state
+end)
+
+local fovToggle = createClassicToggle(mainScrollingFrame, "FOV Circle", fovVisible, function(state)
+    fovVisible = state
+    fovCircle.Visible = state
+end)
+
+local espToggle = createClassicToggle(mainScrollingFrame, "Zombie ESP", espVisible, function(state)
+    espVisible = state
+    updateESP()
+end)
+
+local wallCheckToggle = createClassicToggle(mainScrollingFrame, "Wall Check", wallCheckEnabled, function(state)
+    wallCheckEnabled = state
+end)
+
+local hitboxToggle = createClassicToggle(mainScrollingFrame, "Expand Hitbox", hitboxEnabled, function(state)
+    hitboxEnabled = state
+    updateAllZombies()
+end)
+
+local smoothAimToggle = createClassicToggle(mainScrollingFrame, "Smooth Aim", smoothAimEnabled, function(state)
+    smoothAimEnabled = state
+end)
+
+-- FOV Slider
+local sliderContainer = Instance.new("Frame")
+sliderContainer.Size = UDim2.new(1, 0, 0, 45)
+sliderContainer.BackgroundTransparency = 1
+sliderContainer.Parent = mainScrollingFrame
+
+local sliderLabel = Instance.new("TextLabel")
+sliderLabel.Size = UDim2.new(1, 0, 0, 20)
+sliderLabel.Position = UDim2.new(0, 0, 0, 0)
+sliderLabel.BackgroundTransparency = 1
+sliderLabel.Text = "Aim FOV: " .. aimFOV
+sliderLabel.TextColor3 = colors.text
+sliderLabel.Font = Enum.Font.SourceSans
+sliderLabel.TextSize = 14
+sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+sliderLabel.Parent = sliderContainer
+
+local sliderTrack = Instance.new("Frame")
+sliderTrack.Size = UDim2.new(1, 0, 0, 8)
+sliderTrack.Position = UDim2.new(0, 0, 0, 30)
+sliderTrack.BackgroundColor3 = colors.sliderTrack
+sliderTrack.BorderSizePixel = 1
+sliderTrack.BorderColor3 = colors.border
+sliderTrack.Parent = sliderContainer
+
+local sliderFill = Instance.new("Frame")
+sliderFill.Size = UDim2.new((aimFOV - 20)/280, 0, 1, 0)
+sliderFill.BackgroundColor3 = colors.sliderFill
+sliderFill.BorderSizePixel = 0
+sliderFill.Parent = sliderTrack
 
 local sliderKnob = Instance.new("Frame")
-sliderKnob.Size = UDim2.new(0, 10, 0, 20)
-sliderKnob.Position = UDim2.new(0, (aimFOV / 300) * 200, 0, 0)
-sliderKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-sliderKnob.Parent = slider
+sliderKnob.Size = UDim2.new(0, 16, 0, 16)
+sliderKnob.Position = UDim2.new((aimFOV - 20)/280, -8, 0.5, -8)
+sliderKnob.BackgroundColor3 = colors.text
+sliderKnob.BorderSizePixel = 1
+sliderKnob.BorderColor3 = colors.border
+sliderKnob.Parent = sliderTrack
 
-slider.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+local function updateFOVSlider()
+    sliderFill.Size = UDim2.new((aimFOV - 20)/280, 0, 1, 0)
+    sliderKnob.Position = UDim2.new((aimFOV - 20)/280, -8, 0.5, -8)
+    sliderLabel.Text = "Aim FOV: " .. aimFOV
+    fovCircle.Radius = aimFOV
+end
+
+sliderTrack.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
         draggingSlider = true
     end
 end)
 
-slider.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+UserInputService.InputChanged:Connect(function(input)
+    if draggingSlider and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local mouseX = UserInputService:GetMouseLocation().X
+        local sliderX = sliderTrack.AbsolutePosition.X
+        local sliderWidth = sliderTrack.AbsoluteSize.X
+        local relativeX = math.clamp(mouseX - sliderX, 0, sliderWidth)
+        
+        aimFOV = math.floor(20 + (relativeX/sliderWidth) * 280)
+        updateFOVSlider()
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
         draggingSlider = false
     end
 end)
+
+-- Smoothness Selection
+local smoothnessContainer = Instance.new("Frame")
+smoothnessContainer.Size = UDim2.new(1, 0, 0, 40)
+smoothnessContainer.BackgroundTransparency = 1
+smoothnessContainer.Parent = mainScrollingFrame
+
+local smoothnessLabel = Instance.new("TextLabel")
+smoothnessLabel.Size = UDim2.new(1, 0, 0, 20)
+smoothnessLabel.Position = UDim2.new(0, 0, 0, 0)
+smoothnessLabel.BackgroundTransparency = 1
+smoothnessLabel.Text = "Smoothness: " .. smoothnessAmount
+smoothnessLabel.TextColor3 = colors.text
+smoothnessLabel.Font = Enum.Font.SourceSans
+smoothnessLabel.TextSize = 14
+smoothnessLabel.TextXAlignment = Enum.TextXAlignment.Left
+smoothnessLabel.Parent = smoothnessContainer
+
+local smoothness15Btn = createClassicButton(
+    smoothnessContainer,
+    "1.5",
+    UDim2.new(0.3, 0, 0, 25),
+    function()
+        smoothnessAmount = 1.5
+        smoothnessLabel.Text = "Smoothness: " .. smoothnessAmount
+        smoothness15Btn.BackgroundColor3 = colors.accent
+        smoothness20Btn.BackgroundColor3 = colors.button
+        smoothness25Btn.BackgroundColor3 = colors.button
+    end
+)
+smoothness15Btn.Position = UDim2.new(0, 0, 0, 20)
+smoothness15Btn.BackgroundColor3 = smoothnessAmount == 1.5 and colors.accent or colors.button
+
+local smoothness20Btn = createClassicButton(
+    smoothnessContainer,
+    "2.0",
+    UDim2.new(0.3, 0, 0, 25),
+    function()
+        smoothnessAmount = 2.0
+        smoothnessLabel.Text = "Smoothness: " .. smoothnessAmount
+        smoothness15Btn.BackgroundColor3 = colors.button
+        smoothness20Btn.BackgroundColor3 = colors.accent
+        smoothness25Btn.BackgroundColor3 = colors.button
+    end
+)
+smoothness20Btn.Position = UDim2.new(0.35, 0, 0, 20)
+smoothness20Btn.BackgroundColor3 = smoothnessAmount == 2.0 and colors.accent or colors.button
+
+local smoothness25Btn = createClassicButton(
+    smoothnessContainer,
+    "2.5",
+    UDim2.new(0.3, 0, 0, 25),
+    function()
+        smoothnessAmount = 2.5
+        smoothnessLabel.Text = "Smoothness: " .. smoothnessAmount
+        smoothness15Btn.BackgroundColor3 = colors.button
+        smoothness20Btn.BackgroundColor3 = colors.button
+        smoothness25Btn.BackgroundColor3 = colors.accent
+    end
+)
+smoothness25Btn.Position = UDim2.new(0.7, 0, 0, 20)
+smoothness25Btn.BackgroundColor3 = smoothnessAmount == 2.5 and colors.accent or colors.button
+
+-- Hitbox Selection
+local hitboxContainer = Instance.new("Frame")
+hitboxContainer.Size = UDim2.new(1, 0, 0, 40)
+hitboxContainer.BackgroundTransparency = 1
+hitboxContainer.Parent = mainScrollingFrame
+
+local hitboxLabel = Instance.new("TextLabel")
+hitboxLabel.Size = UDim2.new(1, 0, 0, 20)
+hitboxLabel.Position = UDim2.new(0, 0, 0, 0)
+hitboxLabel.BackgroundTransparency = 1
+hitboxLabel.Text = "Aim Part:"
+hitboxLabel.TextColor3 = colors.text
+hitboxLabel.Font = Enum.Font.SourceSans
+hitboxLabel.TextSize = 14
+hitboxLabel.TextXAlignment = Enum.TextXAlignment.Left
+hitboxLabel.Parent = hitboxContainer
+
+local headBtn = createClassicButton(
+    hitboxContainer,
+    "Head",
+    UDim2.new(0.48, 0, 0, 25),
+    function()
+        aimPartName = "Head"
+        headBtn.BackgroundColor3 = colors.accent
+        torsoBtn.BackgroundColor3 = colors.button
+    end
+)
+headBtn.Position = UDim2.new(0, 0, 0, 20)
+headBtn.BackgroundColor3 = aimPartName == "Head" and colors.accent or colors.button
+
+local torsoBtn = createClassicButton(
+    hitboxContainer,
+    "Torso",
+    UDim2.new(0.48, 0, 0, 25),
+    function()
+        aimPartName = "HumanoidRootPart"
+        headBtn.BackgroundColor3 = colors.button
+        torsoBtn.BackgroundColor3 = colors.accent
+    end
+)
+torsoBtn.Position = UDim2.new(0.52, 0, 0, 20)
+torsoBtn.BackgroundColor3 = aimPartName == "HumanoidRootPart" and colors.accent or colors.button
+
+-- UI Toggle Button (outside main frame)
+local toggleUIBtn = createClassicButton(
+    screenGui,
+    "Hide UI",
+    UDim2.new(0, 100, 0, 30),
+    function()
+        uiVisible = not uiVisible
+        mainContainer.Visible = uiVisible
+        toggleUIBtn.Text = uiVisible and "Hide UI" or "Show UI"
+    end
+)
+toggleUIBtn.Position = UDim2.new(0, 10, 0, 10)
+
+-- Version Selection Button (outside main frame)
+local versionSelectBtn = createClassicButton(
+    screenGui,
+    "Select Version",
+    UDim2.new(0, 120, 0, 30),
+    function()
+        if versionFrame then
+            versionFrame.Visible = not versionFrame.Visible
+        end
+    end
+)
+versionSelectBtn.Position = UDim2.new(0, 10, 0, 50)
 
 -- FOV Circle Drawing
 local fovCircle = Drawing.new("Circle")
@@ -123,352 +449,127 @@ fovCircle.Thickness = 2
 fovCircle.NumSides = 64
 fovCircle.Radius = aimFOV
 fovCircle.Filled = false
-fovCircle.Visible = true
+fovCircle.Visible = fovVisible
 
--- UI Toggle Button (outside main frame)
-local toggleUIBtn = Instance.new("TextButton")
-toggleUIBtn.Size = UDim2.new(0, 100, 0, 40)
-toggleUIBtn.Position = UDim2.new(0, 10, 0, 10)
-toggleUIBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-toggleUIBtn.Text = "Hide UI"
-toggleUIBtn.Parent = screenGui
-toggleUIBtn.TextColor3 = Color3.new(1,1,1)
-toggleUIBtn.Font = Enum.Font.SourceSansBold
-toggleUIBtn.TextSize = 20
-
--- FOV Circle Toggle
-local toggleFovBtn = Instance.new("TextButton")
-toggleFovBtn.Size = UDim2.new(0, 200, 0, 40)
-toggleFovBtn.Position = UDim2.new(0, 30, 0, 120)
-toggleFovBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
-toggleFovBtn.Text = "Hide FOV Circle"
-toggleFovBtn.Parent = mainFrame
-toggleFovBtn.TextColor3 = Color3.new(1,1,1)
-toggleFovBtn.Font = Enum.Font.SourceSansBold
-toggleFovBtn.TextSize = 20
-
--- ESP Toggle
-local toggleEspBtn = Instance.new("TextButton")
-toggleEspBtn.Size = UDim2.new(0, 200, 0, 40)
-toggleEspBtn.Position = UDim2.new(0, 30, 0, 170)
-toggleEspBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-toggleEspBtn.Text = "Hide Body ESP Zombies"
-toggleEspBtn.Parent = mainFrame
-toggleEspBtn.TextColor3 = Color3.new(1,1,1)
-toggleEspBtn.Font = Enum.Font.SourceSansBold
-toggleEspBtn.TextSize = 20
-
--- Wall Check Toggle
-local toggleWallCheckBtn = Instance.new("TextButton")
-toggleWallCheckBtn.Size = UDim2.new(0, 200, 0, 40)
-toggleWallCheckBtn.Position = UDim2.new(0, 30, 0, 220)
-toggleWallCheckBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-toggleWallCheckBtn.Text = "Disable Wall Check"
-toggleWallCheckBtn.Parent = mainFrame
-toggleWallCheckBtn.TextColor3 = Color3.new(1,1,1)
-toggleWallCheckBtn.Font = Enum.Font.SourceSansBold
-toggleWallCheckBtn.TextSize = 20
-
--- Hitbox Toggle
-local hitboxToggle = Instance.new("TextButton")
-hitboxToggle.Size = UDim2.new(0, 200, 0, 40)
-hitboxToggle.Position = UDim2.new(0, 30, 0, 270)
-hitboxToggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-hitboxToggle.TextColor3 = Color3.new(1, 1, 1)
-hitboxToggle.Font = Enum.Font.SourceSansBold
-hitboxToggle.TextSize = 20
-hitboxToggle.Text = "Expand Hitbox: OFF"
-hitboxToggle.Parent = mainFrame
-
--- Hitbox Selection Buttons
-local hitboxHeadBtn = Instance.new("TextButton")
-hitboxHeadBtn.Size = UDim2.new(0, 95, 0, 40)
-hitboxHeadBtn.Position = UDim2.new(0, 30, 0, 320)
-hitboxHeadBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-hitboxHeadBtn.Text = "Head"
-hitboxHeadBtn.Parent = mainFrame
-hitboxHeadBtn.TextColor3 = Color3.new(1,1,1)
-hitboxHeadBtn.Font = Enum.Font.SourceSansBold
-hitboxHeadBtn.TextSize = 18
-
-local hitboxTorsoBtn = Instance.new("TextButton")
-hitboxTorsoBtn.Size = UDim2.new(0, 95, 0, 40)
-hitboxTorsoBtn.Position = UDim2.new(0, 135, 0, 320)
-hitboxTorsoBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-hitboxTorsoBtn.Text = "Torso"
-hitboxTorsoBtn.Parent = mainFrame
-hitboxTorsoBtn.TextColor3 = Color3.new(1,1,1)
-hitboxTorsoBtn.Font = Enum.Font.SourceSansBold
-hitboxTorsoBtn.TextSize = 18
-
--- NEW: Smooth Aim Toggle
-local smoothAimToggle = Instance.new("TextButton")
-smoothAimToggle.Size = UDim2.new(0, 200, 0, 40)
-smoothAimToggle.Position = UDim2.new(0, 30, 0, 370)
-smoothAimToggle.BackgroundColor3 = Color3.fromRGB(120, 0, 200)
-smoothAimToggle.TextColor3 = Color3.new(1, 1, 1)
-smoothAimToggle.Font = Enum.Font.SourceSansBold
-smoothAimToggle.TextSize = 20
-smoothAimToggle.Text = "Smooth Aim: OFF"
-smoothAimToggle.Parent = mainFrame
-
--- NEW: Smoothness Selection Buttons
-local smoothnessLabel = Instance.new("TextLabel")
-smoothnessLabel.Size = UDim2.new(0, 200, 0, 25)
-smoothnessLabel.Position = UDim2.new(0, 30, 0, 420)
-smoothnessLabel.BackgroundTransparency = 1
-smoothnessLabel.TextColor3 = Color3.new(1,1,1)
-smoothnessLabel.Text = "Smoothness: 1.5"
-smoothnessLabel.Font = Enum.Font.SourceSans
-smoothnessLabel.TextSize = 16
-smoothnessLabel.Parent = mainFrame
-
-local smoothness15Btn = Instance.new("TextButton")
-smoothness15Btn.Size = UDim2.new(0, 60, 0, 30)
-smoothness15Btn.Position = UDim2.new(0, 30, 0, 450)
-smoothness15Btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-smoothness15Btn.Text = "1.5"
-smoothness15Btn.Parent = mainFrame
-smoothness15Btn.TextColor3 = Color3.new(1,1,1)
-smoothness15Btn.Font = Enum.Font.SourceSansBold
-smoothness15Btn.TextSize = 16
-
-local smoothness20Btn = Instance.new("TextButton")
-smoothness20Btn.Size = UDim2.new(0, 60, 0, 30)
-smoothness20Btn.Position = UDim2.new(0, 100, 0, 450)
-smoothness20Btn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-smoothness20Btn.Text = "2.0"
-smoothness20Btn.Parent = mainFrame
-smoothness20Btn.TextColor3 = Color3.new(1,1,1)
-smoothness20Btn.Font = Enum.Font.SourceSansBold
-smoothness20Btn.TextSize = 16
-
-local smoothness25Btn = Instance.new("TextButton")
-smoothness25Btn.Size = UDim2.new(0, 60, 0, 30)
-smoothness25Btn.Position = UDim2.new(0, 170, 0, 450)
-smoothness25Btn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-smoothness25Btn.Text = "2.5"
-smoothness25Btn.Parent = mainFrame
-smoothness25Btn.TextColor3 = Color3.new(1,1,1)
-smoothness25Btn.Font = Enum.Font.SourceSansBold
-smoothness25Btn.TextSize = 16
-
--- Version Selection Button (outside main frame)
-local versionSelectBtn = Instance.new("TextButton")
-versionSelectBtn.Size = UDim2.new(0, 120, 0, 40)
-versionSelectBtn.Position = UDim2.new(0, 10, 0, 60)
-versionSelectBtn.BackgroundColor3 = Color3.fromRGB(150, 100, 200)
-versionSelectBtn.Text = "Select Version"
-versionSelectBtn.Parent = screenGui
-versionSelectBtn.TextColor3 = Color3.new(1,1,1)
-versionSelectBtn.Font = Enum.Font.SourceSansBold
-versionSelectBtn.TextSize = 16
-
--- UI Toggle Handler
-toggleUIBtn.MouseButton1Click:Connect(function()
-    uiVisible = not uiVisible
-    mainFrame.Visible = uiVisible
-    toggleUIBtn.Text = uiVisible and "Hide UI" or "Show UI"
-end)
-
--- FOV Circle Toggle Handler
-toggleFovBtn.MouseButton1Click:Connect(function()
-    fovVisible = not fovVisible
-    fovCircle.Visible = fovVisible
-    toggleFovBtn.Text = fovVisible and "Hide FOV Circle" or "Show FOV Circle"
-end)
-
--- Wall Check Toggle Handler
-toggleWallCheckBtn.MouseButton1Click:Connect(function()
-    wallCheckEnabled = not wallCheckEnabled
-    toggleWallCheckBtn.Text = wallCheckEnabled and "Disable Wall Check" or "Enable Wall Check"
-    toggleWallCheckBtn.BackgroundColor3 = wallCheckEnabled and Color3.fromRGB(255, 100, 100) or Color3.fromRGB(100, 255, 100)
-end)
-
--- Hitbox Selection Handlers
-hitboxHeadBtn.MouseButton1Click:Connect(function()
-    aimPartName = "Head"
-    hitboxHeadBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-    hitboxTorsoBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-end)
-
-hitboxTorsoBtn.MouseButton1Click:Connect(function()
-    aimPartName = "HumanoidRootPart"
-    hitboxHeadBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    hitboxTorsoBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-end)
-
--- NEW: Smooth Aim Toggle Handler
-smoothAimToggle.MouseButton1Click:Connect(function()
-    smoothAimEnabled = not smoothAimEnabled
-    smoothAimToggle.Text = smoothAimEnabled and "Smooth Aim: ON" or "Smooth Aim: OFF"
-    smoothAimToggle.BackgroundColor3 = smoothAimEnabled and Color3.fromRGB(180, 0, 255) or Color3.fromRGB(120, 0, 200)
-end)
-
--- NEW: Smoothness Selection Handlers
-smoothness15Btn.MouseButton1Click:Connect(function()
-    smoothnessAmount = 1.5
-    smoothnessLabel.Text = "Smoothness: 1.5"
-    smoothness15Btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-    smoothness20Btn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-    smoothness25Btn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-end)
-
-smoothness20Btn.MouseButton1Click:Connect(function()
-    smoothnessAmount = 2.0
-    smoothnessLabel.Text = "Smoothness: 2.0"
-    smoothness15Btn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-    smoothness20Btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-    smoothness25Btn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-end)
-
-smoothness25Btn.MouseButton1Click:Connect(function()
-    smoothnessAmount = 2.5
-    smoothnessLabel.Text = "Smoothness: 2.5"
-    smoothness15Btn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-    smoothness20Btn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-    smoothness25Btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+-- Update canvas size when content changes
+contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    mainScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 10)
 end)
 
 ----------------------------------------------------------------
--- VERSION SELECTION GUI (RIÊNG BIỆT)
+-- VERSION SELECTION GUI (CLASSIC DESIGN WITH SCROLL)
 ----------------------------------------------------------------
 local versionFrame
 
 local function createVersionSelectionGUI()
     versionFrame = Instance.new("Frame")
-    versionFrame.Size = UDim2.new(0, 260, 0, 180)
-    versionFrame.Position = UDim2.new(0.5, -130, 0.5, 100)
-    versionFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    versionFrame.BorderSizePixel = 0
+    versionFrame.Size = UDim2.new(0, 300, 0, 250)
+    versionFrame.Position = UDim2.new(0.5, -150, 0.5, -125)
+    versionFrame.BackgroundColor3 = colors.background
+    versionFrame.BorderSizePixel = 1
+    versionFrame.BorderColor3 = colors.border
     versionFrame.Parent = screenGui
     versionFrame.Visible = false
     versionFrame.Active = true
     versionFrame.Draggable = true
     
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.Position = UDim2.new(0, 0, 0, 0)
-    title.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-    title.BorderSizePixel = 0
-    title.Text = "SELECT AIMBOT VERSION"
-    title.TextColor3 = Color3.new(1,1,1)
-    title.Font = Enum.Font.SourceSansBold
-    title.TextSize = 16
-    title.Parent = versionFrame
+    -- Header
+    local versionHeader = Instance.new("Frame")
+    versionHeader.Size = UDim2.new(1, 0, 0, 30)
+    versionHeader.Position = UDim2.new(0, 0, 0, 0)
+    versionHeader.BackgroundColor3 = colors.header
+    versionHeader.BorderSizePixel = 1
+    versionHeader.BorderColor3 = colors.border
+    versionHeader.Parent = versionFrame
     
-    -- Function to generate a random color
-    local function getRandomColor()
-        return Color3.new(math.random(), math.random(), math.random())
-    end
-    
-    -- Generate random colors for each version
-    versionButtonColors = {
-        Main = getRandomColor(),
-        OnlySniper = getRandomColor(),
-        IgnoreWraith = getRandomColor(),
-        SmartSpecialKilling = getRandomColor()
-    }
-    
-    -- Main Version Button
-    local mainBtn = Instance.new("TextButton")
-    mainBtn.Size = UDim2.new(0.9, 0, 0, 30)
-    mainBtn.Position = UDim2.new(0.05, 0, 0, 40)
-    mainBtn.BackgroundColor3 = currentVersion == "Main" and versionButtonColors.Main or Color3.fromRGB(90, 90, 90)
-    mainBtn.Text = "Main Version - Aim all zombies"
-    mainBtn.Parent = versionFrame
-    mainBtn.TextColor3 = Color3.new(1,1,1)
-    mainBtn.Font = Enum.Font.SourceSansBold
-    mainBtn.TextSize = 14
-    
-    -- Only Sniper Version Button
-    local sniperBtn = Instance.new("TextButton")
-    sniperBtn.Size = UDim2.new(0.9, 0, 0, 30)
-    sniperBtn.Position = UDim2.new(0.05, 0, 0, 80)
-    sniperBtn.BackgroundColor3 = currentVersion == "OnlySniper" and versionButtonColors.OnlySniper or Color3.fromRGB(90, 90, 90)
-    sniperBtn.Text = "Sniper Only - Aim only sniper zombies"
-    sniperBtn.Parent = versionFrame
-    sniperBtn.TextColor3 = Color3.new(1,1,1)
-    sniperBtn.Font = Enum.Font.SourceSansBold
-    sniperBtn.TextSize = 14
-    
-    -- Ignore Wraith Version Button
-    local ignoreWraithBtn = Instance.new("TextButton")
-    ignoreWraithBtn.Size = UDim2.new(0.9, 0, 0, 30)
-    ignoreWraithBtn.Position = UDim2.new(0.05, 0, 0, 120)
-    ignoreWraithBtn.BackgroundColor3 = currentVersion == "IgnoreWraith" and versionButtonColors.IgnoreWraith or Color3.fromRGB(90, 90, 90)
-    ignoreWraithBtn.Text = "Ignore Wraith - Skip wraith zombies"
-    ignoreWraithBtn.Parent = versionFrame
-    ignoreWraithBtn.TextColor3 = Color3.new(1,1,1)
-    ignoreWraithBtn.Font = Enum.Font.SourceSansBold
-    ignoreWraithBtn.TextSize = 14
-    
-    -- Smart Special Killing Version Button
-    local smartSpecialBtn = Instance.new("TextButton")
-    smartSpecialBtn.Size = UDim2.new(0.9, 0, 0, 30)
-    smartSpecialBtn.Position = UDim2.new(0.05, 0, 0, 160)
-    smartSpecialBtn.BackgroundColor3 = currentVersion == "SmartSpecialKilling" and versionButtonColors.SmartSpecialKilling or Color3.fromRGB(90, 90, 90)
-    smartSpecialBtn.Text = "Smart Kill - Priority system"
-    smartSpecialBtn.Parent = versionFrame
-    smartSpecialBtn.TextColor3 = Color3.new(1,1,1)
-    smartSpecialBtn.Font = Enum.Font.SourceSansBold
-    smartSpecialBtn.TextSize = 14
-    
-    -- Version Button Handlers
-    mainBtn.MouseButton1Click:Connect(function()
-        currentVersion = "Main"
-        mainBtn.BackgroundColor3 = versionButtonColors.Main
-        sniperBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-        ignoreWraithBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-        smartSpecialBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-        versionFrame.Visible = false
-    end)
-    
-    sniperBtn.MouseButton1Click:Connect(function()
-        currentVersion = "OnlySniper"
-        mainBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-        sniperBtn.BackgroundColor3 = versionButtonColors.OnlySniper
-        ignoreWraithBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-        smartSpecialBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-        versionFrame.Visible = false
-    end)
-    
-    ignoreWraithBtn.MouseButton1Click:Connect(function()
-        currentVersion = "IgnoreWraith"
-        mainBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-        sniperBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-        ignoreWraithBtn.BackgroundColor3 = versionButtonColors.IgnoreWraith
-        smartSpecialBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-        versionFrame.Visible = false
-    end)
-    
-    smartSpecialBtn.MouseButton1Click:Connect(function()
-        currentVersion = "SmartSpecialKilling"
-        mainBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-        sniperBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-        ignoreWraithBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-        smartSpecialBtn.BackgroundColor3 = versionButtonColors.SmartSpecialKilling
-        versionFrame.Visible = false
-    end)
-    
-    -- Version Select Button Handler
-    versionSelectBtn.MouseButton1Click:Connect(function()
-        versionFrame.Visible = not versionFrame.Visible
-    end)
+    local versionTitle = Instance.new("TextLabel")
+    versionTitle.Size = UDim2.new(1, -40, 1, 0)
+    versionTitle.Position = UDim2.new(0, 10, 0, 0)
+    versionTitle.BackgroundTransparency = 1
+    versionTitle.Text = "SELECT VERSION"
+    versionTitle.TextColor3 = colors.text
+    versionTitle.Font = Enum.Font.SourceSansBold
+    versionTitle.TextSize = 16
+    versionTitle.TextXAlignment = Enum.TextXAlignment.Left
+    versionTitle.Parent = versionHeader
     
     -- Close button
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 25, 0, 25)
-    closeBtn.Position = UDim2.new(0.95, -25, 0, 2)
-    closeBtn.BackgroundTransparency = 1
-    closeBtn.Text = "X"
-    closeBtn.TextColor3 = Color3.new(1,1,1)
-    closeBtn.Font = Enum.Font.SourceSansBold
-    closeBtn.TextSize = 16
-    closeBtn.Parent = versionFrame
+    local versionCloseBtn = Instance.new("TextButton")
+    versionCloseBtn.Size = UDim2.new(0, 25, 0, 25)
+    versionCloseBtn.Position = UDim2.new(1, -30, 0, 2)
+    versionCloseBtn.BackgroundTransparency = 1
+    versionCloseBtn.Text = "X"
+    versionCloseBtn.TextColor3 = colors.text
+    versionCloseBtn.Font = Enum.Font.SourceSansBold
+    versionCloseBtn.TextSize = 16
+    versionCloseBtn.Parent = versionHeader
     
-    closeBtn.MouseButton1Click:Connect(function()
+    versionCloseBtn.MouseButton1Click:Connect(function()
         versionFrame.Visible = false
+    end)
+    
+    -- Scrolling Frame for Version GUI
+    local versionScrollingFrame = Instance.new("ScrollingFrame")
+    versionScrollingFrame.Size = UDim2.new(1, -10, 1, -40)
+    versionScrollingFrame.Position = UDim2.new(0, 5, 0, 35)
+    versionScrollingFrame.BackgroundTransparency = 1
+    versionScrollingFrame.ScrollBarThickness = 8
+    versionScrollingFrame.ScrollBarImageColor3 = colors.accent
+    versionScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 220)
+    versionScrollingFrame.Parent = versionFrame
+    
+    local versionLayout = Instance.new("UIListLayout")
+    versionLayout.Padding = UDim.new(0, 8)
+    versionLayout.Parent = versionScrollingFrame
+    
+    -- Version buttons
+    local mainBtn = createClassicButton(
+        versionScrollingFrame,
+        "Main Version - Aim all zombies",
+        UDim2.new(1, 0, 0, 40),
+        function()
+            currentVersion = "Main"
+            versionFrame.Visible = false
+        end
+    )
+    mainBtn.BackgroundColor3 = currentVersion == "Main" and Color3.fromRGB(0, 120, 215) or colors.button
+    
+    local sniperBtn = createClassicButton(
+        versionScrollingFrame,
+        "Sniper Only - Aim only sniper zombies",
+        UDim2.new(1, 0, 0, 40),
+        function()
+            currentVersion = "OnlySniper"
+            versionFrame.Visible = false
+        end
+    )
+    sniperBtn.BackgroundColor3 = currentVersion == "OnlySniper" and Color3.fromRGB(0, 180, 80) or colors.button
+    
+    local ignoreWraithBtn = createClassicButton(
+        versionScrollingFrame,
+        "Ignore Wraith - Skip wraith zombies",
+        UDim2.new(1, 0, 0, 40),
+        function()
+            currentVersion = "IgnoreWraith"
+            versionFrame.Visible = false
+        end
+    )
+    ignoreWraithBtn.BackgroundColor3 = currentVersion == "IgnoreWraith" and Color3.fromRGB(255, 165, 0) or colors.button
+    
+    local smartSpecialBtn = createClassicButton(
+        versionScrollingFrame,
+        "Smart Kill - Priority system",
+        UDim2.new(1, 0, 0, 40),
+        function()
+            currentVersion = "SmartSpecialKilling"
+            versionFrame.Visible = false
+        end
+    )
+    smartSpecialBtn.BackgroundColor3 = currentVersion == "SmartSpecialKilling" and Color3.fromRGB(180, 0, 255) or colors.button
+    
+    -- Update canvas size when content changes
+    versionLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        versionScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, versionLayout.AbsoluteContentSize.Y + 10)
     end)
 end
 
@@ -523,7 +624,7 @@ local function cleanupBossTimers()
 end
 
 ----------------------------------------------------------------
--- ESP Functions
+-- ESP Functions (ENHANCED WITH DYNAMIC COLORS)
 ----------------------------------------------------------------
 local function clearESP()
     for _, v in pairs(espObjects) do
@@ -534,33 +635,50 @@ local function clearESP()
     table.clear(espObjects)
 end
 
+local function getZombieColor(zombie)
+    if isSniperZombie(zombie) then
+        return espColors.sniper
+    elseif isWraithZombie(zombie) then
+        return espColors.wraith
+    elseif isBossZombie(zombie) then
+        return espColors.boss
+    elseif isGuardianZombie(zombie) then
+        return espColors.guardian
+    else
+        return espColors.normal
+    end
+end
+
 local function createESP(obj)
     if obj:IsA("Model") and not obj:FindFirstChild("ESP_Highlight") then
+        local zombieColor = getZombieColor(obj)
+        
         local highlight = Instance.new("Highlight")
         highlight.Name = "ESP_Highlight"
         highlight.Adornee = obj
-        highlight.FillColor = Color3.new(1, 0, 0)
-        highlight.OutlineColor = Color3.new(1, 0, 0)
-        highlight.FillTransparency = 1
+        highlight.FillColor = zombieColor
+        highlight.OutlineColor = zombieColor
+        highlight.FillTransparency = 0.3  -- More visible fill
         highlight.OutlineTransparency = 0
         highlight.Parent = obj
         table.insert(espObjects, highlight)
 
         local billboard = Instance.new("BillboardGui")
         billboard.Name = "ESP_Billboard"
-        billboard.Adornee = obj
-        billboard.Size = UDim2.new(0, 100, 0, 50)
+        billboard.Adornee = obj:FindFirstChild("Head") or obj:FindFirstChild("HumanoidRootPart") or obj
+        billboard.Size = UDim2.new(0, 200, 0, 50)
         billboard.StudsOffset = Vector3.new(0, 3, 0)
         billboard.AlwaysOnTop = true
         billboard.Parent = obj
 
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.TextColor3 = Color3.new(1, 0, 0)
-        label.TextSize = 16
-        label.Font = Enum.Font.SourceSansBold
+        label.BackgroundTransparency = 0.5
+        label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        label.TextColor3 = zombieColor
         label.Text = obj.Name
+        label.TextSize = 14
+        label.Font = Enum.Font.SourceSansBold
         label.Parent = billboard
 
         table.insert(espObjects, billboard)
@@ -577,9 +695,10 @@ local function updateESP()
 end
 
 -- ESP Toggle Handler
-toggleEspBtn.MouseButton1Click:Connect(function()
+espToggle.MouseButton1Click:Connect(function()
     espVisible = not espVisible
-    toggleEspBtn.Text = espVisible and "Hide Body ESP Zombies" or "Show Body ESP Zombies"
+    espToggle.Text = espVisible and "ON" or "OFF"
+    espToggle.BackgroundColor3 = espVisible and colors.toggleOn or colors.toggleOff
     updateESP()
 end)
 
@@ -587,6 +706,12 @@ zombiesFolder.ChildAdded:Connect(function(child)
     if espVisible then
         task.wait(0.1)
         createESP(child)
+    end
+end)
+
+zombiesFolder.ChildRemoved:Connect(function(child)
+    if espVisible then
+        updateESP()
     end
 end)
 
@@ -755,7 +880,8 @@ end
 -- Hitbox Toggle Handler
 hitboxToggle.MouseButton1Click:Connect(function()
     hitboxEnabled = not hitboxEnabled
-    hitboxToggle.Text = hitboxEnabled and "Expand Hitbox: ON" or "Expand Hitbox: OFF"
+    hitboxToggle.Text = hitboxEnabled and "ON" or "OFF"
+    hitboxToggle.BackgroundColor3 = hitboxEnabled and colors.toggleOn or colors.toggleOff
     updateAllZombies()
 end)
 
@@ -772,12 +898,12 @@ end)
 RunService.RenderStepped:Connect(function()
     if draggingSlider then
         local mouseX = UserInputService:GetMouseLocation().X
-        local sliderX = slider.AbsolutePosition.X
-        local relativeX = math.clamp(mouseX - sliderX, 0, 200)
-
-        sliderKnob.Position = UDim2.new(0, relativeX, 0, 0)
-        aimFOV = math.clamp(math.floor((relativeX / 200) * 300), 20, 300)
-        fovLabel.Text = "Aim FOV: " .. aimFOV
+        local sliderX = sliderTrack.AbsolutePosition.X
+        local sliderWidth = sliderTrack.AbsoluteSize.X
+        local relativeX = math.clamp(mouseX - sliderX, 0, sliderWidth)
+        
+        aimFOV = math.floor(20 + (relativeX/sliderWidth) * 280)
+        updateFOVSlider()
     end
 
     fovCircle.Position = camera.ViewportSize / 2
@@ -810,8 +936,8 @@ if isPC then
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if not gameProcessed and input.KeyCode == aimbindKey then
             aimLockActive = not aimLockActive
-            toggleButton.Text = aimLockActive and "AimLock On" or "AimLock Off"
-            toggleButton.BackgroundColor3 = aimLockActive and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
+            aimlockToggle.Text = aimLockActive and "ON" or "OFF"
+            aimlockToggle.BackgroundColor3 = aimLockActive and colors.toggleOn or colors.toggleOff
         end
     end)
 end
