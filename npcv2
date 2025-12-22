@@ -1,4 +1,4 @@
---// SMART SPECIAL KILLING AIM LOCK SCRIPT WITH FOV + CLASSIC GUI SYSTEM + WALL CHECK + HITBOX + VERSION SELECTION //--
+--// SMART SPECIAL KILLING AIM LOCK SCRIPT WITH FOV + CLASSIC GUI SYSTEM + WALL CHECK + HITBOX + VERSION SELECTION + DESTROYERS ONLY + PRINTING MODE + ANNIHILATOR ONLY //--
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -21,21 +21,22 @@ local espVisible = false
 local wallCheckEnabled = true
 local hitboxEnabled = false
 
--- NEW: Version system
-local currentVersion = "Main" -- "Main", "OnlySniper", "IgnoreWraith", "SmartSpecialKilling"
+-- Version system
+local currentVersion = "Main" -- "Main", "OnlySniper", "IgnoreWraith", "SmartSpecialKilling", "DestroyersOnly", "PrintingMode", "AnnihilatorOnly"
 local versionButtonColors = {}
 local versionFrameVisible = false
 
--- NEW: Smart Special Killing variables
-local GUARDIAN_PRIORITY_RANGE = 50 -- Distance to prioritize GuardianZombie when near closest zombie
+-- Smart Special Killing variables
+local GUARDIAN_PRIORITY_RANGE = 20 -- Distance to prioritize GuardianZombie when near Hunter (updated from 50 to 20)
 local BOSS_IGNORE_HP_THRESHOLD = 0.5 -- 50% HP
 local BOSS_IGNORE_DURATION = 8 -- Seconds to ignore Boss
 local bossIgnoreTimers = {} -- Table to track boss ignore timers
 
--- NEW: Smooth aiming variables
-local smoothAimEnabled = false
+-- Smooth aiming variables
+local smoothAimEnabled = true
 local smoothnessAmount = 1.5 -- Default smoothness
 local lastCameraCFrame = camera.CFrame
+local aimSmoothTween = nil
 
 -- ESP storage
 local espObjects = {}
@@ -62,11 +63,19 @@ local colors = {
 
 -- Dynamic ESP colors for different zombie types
 local espColors = {
-    normal = Color3.fromRGB(255, 50, 50),      -- Red for normal zombies
-    sniper = Color3.fromRGB(50, 255, 50),      -- Green for sniper zombies
-    wraith = Color3.fromRGB(255, 50, 255),     -- Pink for wraith zombies
-    boss = Color3.fromRGB(255, 165, 0),        -- Orange for boss zombies
-    guardian = Color3.fromRGB(0, 191, 255)     -- Blue for guardian zombies
+    normal = Color3.fromRGB(255, 255, 255),      -- White for normal zombies
+    sniper = Color3.fromRGB(50, 255, 50),        -- Green for sniper zombies
+    wraith = Color3.fromRGB(255, 50, 255),       -- Pink for wraith zombies
+    boss = Color3.fromRGB(255, 0, 0),            -- Red for boss zombies
+    guardian = Color3.fromRGB(0, 191, 255),      -- Blue for guardian zombies
+    hunter = Color3.fromRGB(255, 165, 0),        -- Orange for hunter zombies
+    berserk = Color3.fromRGB(255, 0, 0),         -- Red for berserk zombies
+    drench = Color3.fromRGB(0, 100, 255),        -- Blue for drench zombies
+    destroyer = Color3.fromRGB(255, 215, 0),     -- Gold for destroyer zombies
+    annihilator = Color3.fromRGB(255, 50, 50),   -- Red for annihilator zombies
+    swampGiant = Color3.fromRGB(100, 75, 50),    -- Brown for swamp giant
+    headless = Color3.fromRGB(150, 0, 150),      -- Purple for headless zombies
+    toxic = Color3.fromRGB(0, 255, 100)          -- Acid green for toxic zombies
 }
 
 ----------------------------------------------------------------
@@ -83,6 +92,10 @@ mainContainer.Size = UDim2.new(0, 300, 0, 400)
 mainContainer.Position = UDim2.new(0.5, -150, 0.5, -200)
 mainContainer.BackgroundTransparency = 1
 mainContainer.Parent = screenGui
+
+-- Make main GUI draggable
+mainContainer.Active = true
+mainContainer.Draggable = true
 
 -- Classic frame with border
 local mainFrame = Instance.new("Frame")
@@ -336,42 +349,42 @@ local smoothness15Btn = createClassicButton(
         smoothnessAmount = 1.5
         smoothnessLabel.Text = "Smoothness: " .. smoothnessAmount
         smoothness15Btn.BackgroundColor3 = colors.accent
-        smoothness20Btn.BackgroundColor3 = colors.button
-        smoothness25Btn.BackgroundColor3 = colors.button
+        smoothness3Btn.BackgroundColor3 = colors.button
+        smoothness6Btn.BackgroundColor3 = colors.button
     end
 )
 smoothness15Btn.Position = UDim2.new(0, 0, 0, 20)
 smoothness15Btn.BackgroundColor3 = smoothnessAmount == 1.5 and colors.accent or colors.button
 
-local smoothness20Btn = createClassicButton(
+local smoothness3Btn = createClassicButton(
     smoothnessContainer,
-    "2.0",
+    "3.0",
     UDim2.new(0.3, 0, 0, 25),
     function()
-        smoothnessAmount = 2.0
+        smoothnessAmount = 3.0
         smoothnessLabel.Text = "Smoothness: " .. smoothnessAmount
         smoothness15Btn.BackgroundColor3 = colors.button
-        smoothness20Btn.BackgroundColor3 = colors.accent
-        smoothness25Btn.BackgroundColor3 = colors.button
+        smoothness3Btn.BackgroundColor3 = colors.accent
+        smoothness6Btn.BackgroundColor3 = colors.button
     end
 )
-smoothness20Btn.Position = UDim2.new(0.35, 0, 0, 20)
-smoothness20Btn.BackgroundColor3 = smoothnessAmount == 2.0 and colors.accent or colors.button
+smoothness3Btn.Position = UDim2.new(0.35, 0, 0, 20)
+smoothness3Btn.BackgroundColor3 = smoothnessAmount == 3.0 and colors.accent or colors.button
 
-local smoothness25Btn = createClassicButton(
+local smoothness6Btn = createClassicButton(
     smoothnessContainer,
-    "2.5",
+    "6.0",
     UDim2.new(0.3, 0, 0, 25),
     function()
-        smoothnessAmount = 2.5
+        smoothnessAmount = 6.0
         smoothnessLabel.Text = "Smoothness: " .. smoothnessAmount
         smoothness15Btn.BackgroundColor3 = colors.button
-        smoothness20Btn.BackgroundColor3 = colors.button
-        smoothness25Btn.BackgroundColor3 = colors.accent
+        smoothness3Btn.BackgroundColor3 = colors.button
+        smoothness6Btn.BackgroundColor3 = colors.accent
     end
 )
-smoothness25Btn.Position = UDim2.new(0.7, 0, 0, 20)
-smoothness25Btn.BackgroundColor3 = smoothnessAmount == 2.5 and colors.accent or colors.button
+smoothness6Btn.Position = UDim2.new(0.7, 0, 0, 20)
+smoothness6Btn.BackgroundColor3 = smoothnessAmount == 6.0 and colors.accent or colors.button
 
 -- Hitbox Selection
 local hitboxContainer = Instance.new("Frame")
@@ -395,9 +408,11 @@ local headBtn = createClassicButton(
     "Head",
     UDim2.new(0.48, 0, 0, 25),
     function()
-        aimPartName = "Head"
-        headBtn.BackgroundColor3 = colors.accent
-        torsoBtn.BackgroundColor3 = colors.button
+        if currentVersion ~= "PrintingMode" then
+            aimPartName = "Head"
+            headBtn.BackgroundColor3 = colors.accent
+            torsoBtn.BackgroundColor3 = colors.button
+        end
     end
 )
 headBtn.Position = UDim2.new(0, 0, 0, 20)
@@ -408,9 +423,11 @@ local torsoBtn = createClassicButton(
     "Torso",
     UDim2.new(0.48, 0, 0, 25),
     function()
-        aimPartName = "HumanoidRootPart"
-        headBtn.BackgroundColor3 = colors.button
-        torsoBtn.BackgroundColor3 = colors.accent
+        if currentVersion ~= "PrintingMode" then
+            aimPartName = "HumanoidRootPart"
+            headBtn.BackgroundColor3 = colors.button
+            torsoBtn.BackgroundColor3 = colors.accent
+        end
     end
 )
 torsoBtn.Position = UDim2.new(0.52, 0, 0, 20)
@@ -428,6 +445,198 @@ local toggleUIBtn = createClassicButton(
     end
 )
 toggleUIBtn.Position = UDim2.new(0, 10, 0, 10)
+
+-- Create the version selection GUI first
+local versionFrame
+
+local function createVersionSelectionGUI()
+    versionFrame = Instance.new("Frame")
+    versionFrame.Size = UDim2.new(0, 300, 0, 400) -- Increased height for new version
+    versionFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+    versionFrame.BackgroundColor3 = colors.background
+    versionFrame.BorderSizePixel = 1
+    versionFrame.BorderColor3 = colors.border
+    versionFrame.Parent = screenGui
+    versionFrame.Visible = false
+    versionFrame.Active = true
+    versionFrame.Draggable = true
+    versionFrame.ZIndex = 10 -- Ensure it appears above other elements
+    
+    -- Header
+    local versionHeader = Instance.new("Frame")
+    versionHeader.Size = UDim2.new(1, 0, 0, 30)
+    versionHeader.Position = UDim2.new(0, 0, 0, 0)
+    versionHeader.BackgroundColor3 = colors.header
+    versionHeader.BorderSizePixel = 1
+    versionHeader.BorderColor3 = colors.border
+    versionHeader.Parent = versionFrame
+    versionHeader.ZIndex = 11
+    
+    local versionTitle = Instance.new("TextLabel")
+    versionTitle.Size = UDim2.new(1, -40, 1, 0)
+    versionTitle.Position = UDim2.new(0, 10, 0, 0)
+    versionTitle.BackgroundTransparency = 1
+    versionTitle.Text = "SELECT VERSION"
+    versionTitle.TextColor3 = colors.text
+    versionTitle.Font = Enum.Font.SourceSansBold
+    versionTitle.TextSize = 16
+    versionTitle.TextXAlignment = Enum.TextXAlignment.Left
+    versionTitle.ZIndex = 12
+    versionTitle.Parent = versionHeader
+    
+    -- Close button
+    local versionCloseBtn = Instance.new("TextButton")
+    versionCloseBtn.Size = UDim2.new(0, 25, 0, 25)
+    versionCloseBtn.Position = UDim2.new(1, -30, 0, 2)
+    versionCloseBtn.BackgroundTransparency = 1
+    versionCloseBtn.Text = "X"
+    versionCloseBtn.TextColor3 = colors.text
+    versionCloseBtn.Font = Enum.Font.SourceSansBold
+    versionCloseBtn.TextSize = 16
+    versionCloseBtn.ZIndex = 12
+    versionCloseBtn.Parent = versionHeader
+    
+    versionCloseBtn.MouseButton1Click:Connect(function()
+        versionFrame.Visible = false
+    end)
+    
+    -- Scrolling Frame for Version GUI
+    local versionScrollingFrame = Instance.new("ScrollingFrame")
+    versionScrollingFrame.Size = UDim2.new(1, -10, 1, -40)
+    versionScrollingFrame.Position = UDim2.new(0, 5, 0, 35)
+    versionScrollingFrame.BackgroundTransparency = 1
+    versionScrollingFrame.ScrollBarThickness = 8
+    versionScrollingFrame.ScrollBarImageColor3 = colors.accent
+    versionScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 370) -- Increased for new version
+    versionScrollingFrame.ZIndex = 11
+    versionScrollingFrame.Parent = versionFrame
+    
+    local versionLayout = Instance.new("UIListLayout")
+    versionLayout.Padding = UDim.new(0, 8)
+    versionLayout.Parent = versionScrollingFrame
+    
+    -- Version buttons
+    local mainBtn = createClassicButton(
+        versionScrollingFrame,
+        "Main Version - Aim all zombies",
+        UDim2.new(1, 0, 0, 40),
+        function()
+            currentVersion = "Main"
+            aimPartName = "Head" -- Reset to head for non-Printing modes
+            headBtn.BackgroundColor3 = colors.accent
+            torsoBtn.BackgroundColor3 = colors.button
+            versionFrame.Visible = false
+            updateAllZombies()
+        end
+    )
+    mainBtn.BackgroundColor3 = currentVersion == "Main" and Color3.fromRGB(0, 120, 215) or colors.button
+    mainBtn.ZIndex = 12
+    
+    local sniperBtn = createClassicButton(
+        versionScrollingFrame,
+        "Sniper Only - Aim only sniper zombies",
+        UDim2.new(1, 0, 0, 40),
+        function()
+            currentVersion = "OnlySniper"
+            aimPartName = "Head" -- Reset to head for non-Printing modes
+            headBtn.BackgroundColor3 = colors.accent
+            torsoBtn.BackgroundColor3 = colors.button
+            versionFrame.Visible = false
+            updateAllZombies()
+        end
+    )
+    sniperBtn.BackgroundColor3 = currentVersion == "OnlySniper" and Color3.fromRGB(0, 180, 80) or colors.button
+    sniperBtn.ZIndex = 12
+    
+    local ignoreWraithBtn = createClassicButton(
+        versionScrollingFrame,
+        "Ignore Wraith - Skip wraith & drench zombies",
+        UDim2.new(1, 0, 0, 40),
+        function()
+            currentVersion = "IgnoreWraith"
+            aimPartName = "Head" -- Reset to head for non-Printing modes
+            headBtn.BackgroundColor3 = colors.accent
+            torsoBtn.BackgroundColor3 = colors.button
+            versionFrame.Visible = false
+            updateAllZombies()
+        end
+    )
+    ignoreWraithBtn.BackgroundColor3 = currentVersion == "IgnoreWraith" and Color3.fromRGB(255, 165, 0) or colors.button
+    ignoreWraithBtn.ZIndex = 12
+    
+    local smartSpecialBtn = createClassicButton(
+        versionScrollingFrame,
+        "Smart Kill - Priority system",
+        UDim2.new(1, 0, 0, 40),
+        function()
+            currentVersion = "SmartSpecialKilling"
+            aimPartName = "Head" -- Reset to head for non-Printing modes
+            headBtn.BackgroundColor3 = colors.accent
+            torsoBtn.BackgroundColor3 = colors.button
+            versionFrame.Visible = false
+            updateAllZombies()
+        end
+    )
+    smartSpecialBtn.BackgroundColor3 = currentVersion == "SmartSpecialKilling" and Color3.fromRGB(180, 0, 255) or colors.button
+    smartSpecialBtn.ZIndex = 12
+    
+    local destroyersOnlyBtn = createClassicButton(
+        versionScrollingFrame,
+        "Destroyers Only - turret only destroyer",
+        UDim2.new(1, 0, 0, 40),
+        function()
+            currentVersion = "DestroyersOnly"
+            aimPartName = "Head" -- Reset to head for non-Printing modes
+            headBtn.BackgroundColor3 = colors.accent
+            torsoBtn.BackgroundColor3 = colors.button
+            versionFrame.Visible = false
+            updateAllZombies()
+        end
+    )
+    destroyersOnlyBtn.BackgroundColor3 = currentVersion == "DestroyersOnly" and Color3.fromRGB(255, 215, 0) or colors.button
+    destroyersOnlyBtn.ZIndex = 12
+    
+    -- Printing Mode Version
+    local printingModeBtn = createClassicButton(
+        versionScrollingFrame,
+        "Printing Mode - reduce damage to print",
+        UDim2.new(1, 0, 0, 40),
+        function()
+            currentVersion = "PrintingMode"
+            aimPartName = "HumanoidRootPart" -- Force torso for Printing Mode
+            headBtn.BackgroundColor3 = colors.button
+            torsoBtn.BackgroundColor3 = colors.accent
+            versionFrame.Visible = false
+            updateAllZombies()
+        end
+    )
+    printingModeBtn.BackgroundColor3 = currentVersion == "PrintingMode" and Color3.fromRGB(100, 100, 255) or colors.button
+    printingModeBtn.ZIndex = 12
+    
+    -- NEW: Annihilator Only Version
+    local annihilatorOnlyBtn = createClassicButton(
+        versionScrollingFrame,
+        "Annihilator Only - target only robot",
+        UDim2.new(1, 0, 0, 40),
+        function()
+            currentVersion = "AnnihilatorOnly"
+            aimPartName = "Head" -- Reset to head for non-Printing modes
+            headBtn.BackgroundColor3 = colors.accent
+            torsoBtn.BackgroundColor3 = colors.button
+            versionFrame.Visible = false
+            updateAllZombies()
+        end
+    )
+    annihilatorOnlyBtn.BackgroundColor3 = currentVersion == "AnnihilatorOnly" and Color3.fromRGB(255, 50, 50) or colors.button
+    annihilatorOnlyBtn.ZIndex = 12
+    
+    -- Update canvas size when content changes
+    versionLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        versionScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, versionLayout.AbsoluteContentSize.Y + 10)
+    end)
+end
+
+createVersionSelectionGUI()
 
 -- Version Selection Button (outside main frame)
 local versionSelectBtn = createClassicButton(
@@ -457,125 +666,6 @@ contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 end)
 
 ----------------------------------------------------------------
--- VERSION SELECTION GUI (CLASSIC DESIGN WITH SCROLL)
-----------------------------------------------------------------
-local versionFrame
-
-local function createVersionSelectionGUI()
-    versionFrame = Instance.new("Frame")
-    versionFrame.Size = UDim2.new(0, 300, 0, 250)
-    versionFrame.Position = UDim2.new(0.5, -150, 0.5, -125)
-    versionFrame.BackgroundColor3 = colors.background
-    versionFrame.BorderSizePixel = 1
-    versionFrame.BorderColor3 = colors.border
-    versionFrame.Parent = screenGui
-    versionFrame.Visible = false
-    versionFrame.Active = true
-    versionFrame.Draggable = true
-    
-    -- Header
-    local versionHeader = Instance.new("Frame")
-    versionHeader.Size = UDim2.new(1, 0, 0, 30)
-    versionHeader.Position = UDim2.new(0, 0, 0, 0)
-    versionHeader.BackgroundColor3 = colors.header
-    versionHeader.BorderSizePixel = 1
-    versionHeader.BorderColor3 = colors.border
-    versionHeader.Parent = versionFrame
-    
-    local versionTitle = Instance.new("TextLabel")
-    versionTitle.Size = UDim2.new(1, -40, 1, 0)
-    versionTitle.Position = UDim2.new(0, 10, 0, 0)
-    versionTitle.BackgroundTransparency = 1
-    versionTitle.Text = "SELECT VERSION"
-    versionTitle.TextColor3 = colors.text
-    versionTitle.Font = Enum.Font.SourceSansBold
-    versionTitle.TextSize = 16
-    versionTitle.TextXAlignment = Enum.TextXAlignment.Left
-    versionTitle.Parent = versionHeader
-    
-    -- Close button
-    local versionCloseBtn = Instance.new("TextButton")
-    versionCloseBtn.Size = UDim2.new(0, 25, 0, 25)
-    versionCloseBtn.Position = UDim2.new(1, -30, 0, 2)
-    versionCloseBtn.BackgroundTransparency = 1
-    versionCloseBtn.Text = "X"
-    versionCloseBtn.TextColor3 = colors.text
-    versionCloseBtn.Font = Enum.Font.SourceSansBold
-    versionCloseBtn.TextSize = 16
-    versionCloseBtn.Parent = versionHeader
-    
-    versionCloseBtn.MouseButton1Click:Connect(function()
-        versionFrame.Visible = false
-    end)
-    
-    -- Scrolling Frame for Version GUI
-    local versionScrollingFrame = Instance.new("ScrollingFrame")
-    versionScrollingFrame.Size = UDim2.new(1, -10, 1, -40)
-    versionScrollingFrame.Position = UDim2.new(0, 5, 0, 35)
-    versionScrollingFrame.BackgroundTransparency = 1
-    versionScrollingFrame.ScrollBarThickness = 8
-    versionScrollingFrame.ScrollBarImageColor3 = colors.accent
-    versionScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 220)
-    versionScrollingFrame.Parent = versionFrame
-    
-    local versionLayout = Instance.new("UIListLayout")
-    versionLayout.Padding = UDim.new(0, 8)
-    versionLayout.Parent = versionScrollingFrame
-    
-    -- Version buttons
-    local mainBtn = createClassicButton(
-        versionScrollingFrame,
-        "Main Version - Aim all zombies",
-        UDim2.new(1, 0, 0, 40),
-        function()
-            currentVersion = "Main"
-            versionFrame.Visible = false
-        end
-    )
-    mainBtn.BackgroundColor3 = currentVersion == "Main" and Color3.fromRGB(0, 120, 215) or colors.button
-    
-    local sniperBtn = createClassicButton(
-        versionScrollingFrame,
-        "Sniper Only - Aim only sniper zombies",
-        UDim2.new(1, 0, 0, 40),
-        function()
-            currentVersion = "OnlySniper"
-            versionFrame.Visible = false
-        end
-    )
-    sniperBtn.BackgroundColor3 = currentVersion == "OnlySniper" and Color3.fromRGB(0, 180, 80) or colors.button
-    
-    local ignoreWraithBtn = createClassicButton(
-        versionScrollingFrame,
-        "Ignore Wraith - Skip wraith zombies",
-        UDim2.new(1, 0, 0, 40),
-        function()
-            currentVersion = "IgnoreWraith"
-            versionFrame.Visible = false
-        end
-    )
-    ignoreWraithBtn.BackgroundColor3 = currentVersion == "IgnoreWraith" and Color3.fromRGB(255, 165, 0) or colors.button
-    
-    local smartSpecialBtn = createClassicButton(
-        versionScrollingFrame,
-        "Smart Kill - Priority system",
-        UDim2.new(1, 0, 0, 40),
-        function()
-            currentVersion = "SmartSpecialKilling"
-            versionFrame.Visible = false
-        end
-    )
-    smartSpecialBtn.BackgroundColor3 = currentVersion == "SmartSpecialKilling" and Color3.fromRGB(180, 0, 255) or colors.button
-    
-    -- Update canvas size when content changes
-    versionLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        versionScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, versionLayout.AbsoluteContentSize.Y + 10)
-    end)
-end
-
-createVersionSelectionGUI()
-
-----------------------------------------------------------------
 -- SPECIAL ZOMBIE IDENTIFICATION FUNCTIONS
 ----------------------------------------------------------------
 local function isSniperZombie(zombie)
@@ -584,6 +674,42 @@ end
 
 local function isWraithZombie(zombie)
     return zombie.Name:lower():find("wraith")
+end
+
+local function isHunterZombie(zombie)
+    return zombie.Name:lower():find("hunter")
+end
+
+local function isBerserkZombie(zombie)
+    return zombie.Name:lower():find("berserk")
+end
+
+local function isDrenchZombie(zombie)
+    return zombie.Name:lower():find("drench")
+end
+
+local function isDestroyerZombie(zombie)
+    return zombie.Name:lower():find("destroyer")
+end
+
+-- NEW: Annihilator zombie identification
+local function isAnnihilatorZombie(zombie)
+    return zombie.Name:lower():find("annihilator") or zombie.Name:lower():find("robot")
+end
+
+-- NEW: SwampGiant zombie identification
+local function isSwampGiantZombie(zombie)
+    return zombie.Name == "SwampGiant" or zombie.Name:lower():find("swampgiant")
+end
+
+-- NEW: Headless zombie identification
+local function isHeadlessZombie(zombie)
+    return zombie.Name == "Headless" or zombie.Name:lower():find("headless")
+end
+
+-- NEW: Toxic zombie identification
+local function isToxicZombie(zombie)
+    return zombie.Name == "ToxicZombie" or zombie.Name:lower():find("toxic")
 end
 
 ----------------------------------------------------------------
@@ -602,7 +728,7 @@ local function shouldIgnoreBoss(boss)
     if bossIgnoreTimers[boss] and os.clock() - bossIgnoreTimers[boss] < BOSS_IGNORE_DURATION then
         return true
     end
-    
+
     -- Check if boss HP is below threshold
     local humanoid = boss:FindFirstChild("Humanoid")
     if humanoid and humanoid.Health / humanoid.MaxHealth <= BOSS_IGNORE_HP_THRESHOLD then
@@ -610,7 +736,7 @@ local function shouldIgnoreBoss(boss)
         bossIgnoreTimers[boss] = os.clock()
         return true
     end
-    
+
     return false
 end
 
@@ -636,52 +762,80 @@ local function clearESP()
 end
 
 local function getZombieColor(zombie)
-    if isSniperZombie(zombie) then
+    if isHeadlessZombie(zombie) then
+        return espColors.headless
+    elseif isToxicZombie(zombie) then
+        return espColors.toxic
+    elseif isSwampGiantZombie(zombie) then
+        return espColors.swampGiant
+    elseif isAnnihilatorZombie(zombie) then
+        return espColors.annihilator
+    elseif isDestroyerZombie(zombie) then
+        return espColors.destroyer
+    elseif isBossZombie(zombie) then
+        return espColors.boss
+    elseif isHunterZombie(zombie) then
+        return espColors.hunter
+    elseif isSniperZombie(zombie) then
         return espColors.sniper
     elseif isWraithZombie(zombie) then
         return espColors.wraith
-    elseif isBossZombie(zombie) then
-        return espColors.boss
     elseif isGuardianZombie(zombie) then
         return espColors.guardian
+    elseif isBerserkZombie(zombie) then
+        return espColors.berserk
+    elseif isDrenchZombie(zombie) then
+        return espColors.drench
     else
         return espColors.normal
     end
+end
+
+local function shouldShowESP(zombie)
+    local name = zombie.Name:lower()
+    return name:find("sniper") or name:find("hunter") or name:find("berserk") or name:find("boss") or 
+           name:find("wraith") or name:find("guardian") or name:find("drench") or name:find("destroyer") or
+           name:find("annihilator") or name:find("robot") or name:find("swampgiant") or 
+           name:find("headless") or name:find("toxic")
 end
 
 local function createESP(obj)
     if obj:IsA("Model") and not obj:FindFirstChild("ESP_Highlight") then
         local zombieColor = getZombieColor(obj)
         
+        -- Highlight for all zombies (normal and special)
         local highlight = Instance.new("Highlight")
         highlight.Name = "ESP_Highlight"
         highlight.Adornee = obj
         highlight.FillColor = zombieColor
         highlight.OutlineColor = zombieColor
-        highlight.FillTransparency = 0.3  -- More visible fill
+        highlight.FillTransparency = 0.8  -- More transparent to not block vision
         highlight.OutlineTransparency = 0
         highlight.Parent = obj
         table.insert(espObjects, highlight)
 
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "ESP_Billboard"
-        billboard.Adornee = obj:FindFirstChild("Head") or obj:FindFirstChild("HumanoidRootPart") or obj
-        billboard.Size = UDim2.new(0, 200, 0, 50)
-        billboard.StudsOffset = Vector3.new(0, 3, 0)
-        billboard.AlwaysOnTop = true
-        billboard.Parent = obj
+        -- Only show name text for special zombies (with transparent background)
+        if shouldShowESP(obj) then
+            -- Smaller, less intrusive billboard with transparent background
+            local billboard = Instance.new("BillboardGui")
+            billboard.Name = "ESP_Billboard"
+            billboard.Adornee = obj:FindFirstChild("Head") or obj:FindFirstChild("HumanoidRootPart") or obj
+            billboard.Size = UDim2.new(0, 100, 0, 20) -- Reduced size
+            billboard.StudsOffset = Vector3.new(0, 2.5, 0) -- Slightly higher position
+            billboard.AlwaysOnTop = true
+            billboard.Parent = obj
 
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 0.5
-        label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        label.TextColor3 = zombieColor
-        label.Text = obj.Name
-        label.TextSize = 14
-        label.Font = Enum.Font.SourceSansBold
-        label.Parent = billboard
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(1, 0, 1, 0)
+            label.BackgroundTransparency = 1 -- Completely transparent background
+            label.TextColor3 = zombieColor
+            label.Text = obj.Name
+            label.TextSize = 12 -- Smaller text size
+            label.Font = Enum.Font.SourceSansBold
+            label.Parent = billboard
 
-        table.insert(espObjects, billboard)
+            table.insert(espObjects, billboard)
+        end
     end
 end
 
@@ -716,7 +870,7 @@ zombiesFolder.ChildRemoved:Connect(function(child)
 end)
 
 ----------------------------------------------------------------
--- SMOOTH AIMING FUNCTIONS (NEW)
+-- IMPROVED SMOOTH AIMING FUNCTIONS (UPDATED)
 ----------------------------------------------------------------
 local function smoothAim(targetPosition)
     if not smoothAimEnabled then
@@ -724,73 +878,164 @@ local function smoothAim(targetPosition)
         lastCameraCFrame = camera.CFrame
         return
     end
-    
+
+    -- Cancel any existing tween
+    if aimSmoothTween then
+        aimSmoothTween:Cancel()
+        aimSmoothTween = nil
+    end
+
     local currentPosition = camera.CFrame.Position
     local targetLookVector = (targetPosition - currentPosition).Unit
+    
+    -- Calculate the desired look CFrame
     local targetCFrame = CFrame.new(currentPosition, currentPosition + targetLookVector)
     
-    -- Apply smoothness
-    local smoothFactor = 1 / smoothnessAmount
-    local newCFrame = lastCameraCFrame:Lerp(targetCFrame, smoothFactor)
+    -- Apply smoothness with a tween for more natural movement
+    local tweenInfo = TweenInfo.new(
+        0.1 / smoothnessAmount, -- Duration based on smoothness
+        Enum.EasingStyle.Quad, -- Natural easing
+        Enum.EasingDirection.Out -- Ease out for smooth stop
+    )
     
-    camera.CFrame = newCFrame
-    lastCameraCFrame = newCFrame
+    aimSmoothTween = TweenService:Create(camera, tweenInfo, {CFrame = targetCFrame})
+    aimSmoothTween:Play()
+    
+    lastCameraCFrame = targetCFrame
+end
+
+----------------------------------------------------------------
+-- IMPROVED WALL CHECK FUNCTIONS (UPDATED)
+----------------------------------------------------------------
+local function isVisible(targetPart)
+    if not wallCheckEnabled then
+        return true
+    end
+    
+    -- Get camera position
+    local cameraPos = camera.CFrame.Position
+    
+    -- Get target position
+    local targetPos = targetPart.Position
+    
+    -- Create a ray from camera to target
+    local direction = (targetPos - cameraPos).Unit
+    local distance = (targetPos - cameraPos).Magnitude
+    
+    -- Create raycast parameters
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    
+    -- Create filter list (ignore players, camera, and the target itself)
+    local filterList = {player.Character, camera}
+    
+    -- Add all players to filter list
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character then
+            table.insert(filterList, plr.Character)
+        end
+    end
+    
+    -- Add the target's parent to filter list to avoid hitting the target itself
+    if targetPart.Parent then
+        table.insert(filterList, targetPart.Parent)
+    end
+    
+    raycastParams.FilterDescendantsInstances = filterList
+    raycastParams.IgnoreWater = true
+    
+    -- Cast the ray
+    local result = workspace:Raycast(cameraPos, direction * distance, raycastParams)
+    
+    -- If we hit nothing, the target is visible
+    if not result then
+        return true
+    end
+    
+    -- Check if we hit a transparent part (like glass)
+    if result.Instance and result.Instance.Transparency > 0.8 then
+        -- Cast another ray from the hit position to the target
+        local newRaycastParams = RaycastParams.new()
+        newRaycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        newRaycastParams.FilterDescendantsInstances = filterList
+        newRaycastParams.IgnoreWater = true
+        
+        local newResult = workspace:Raycast(result.Position + (direction * 0.1), direction * (distance - (result.Position - cameraPos).Magnitude), newRaycastParams)
+        
+        if not newResult then
+            return true
+        end
+    end
+    
+    -- If we hit something solid, the target is not visible
+    return false
 end
 
 ----------------------------------------------------------------
 -- AIMBOT + WALL CHECK FUNCTIONS (UPDATED WITH VERSION LOGIC)
 ----------------------------------------------------------------
-local function isVisible(targetPart)
-    local origin = camera.CFrame.Position
-    local direction = (targetPart.Position - origin).Unit * 500
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-    raycastParams.FilterDescendantsInstances = {player.Character, camera}
-    raycastParams.IgnoreWater = true
-
-    local result = workspace:Raycast(origin, direction, raycastParams)
-    return result and result.Instance and targetPart:IsDescendantOf(result.Instance.Parent)
-end
-
 local function getClosestZombieInFOV()
     local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
     local closestDist = aimFOV
     local closestZombie = nil
 
     for _, zombie in ipairs(zombiesFolder:GetChildren()) do
-        if zombie:IsA("Model") and zombie:FindFirstChild(aimPartName) then
+        -- Skip SwampGiant zombies entirely
+        if isSwampGiantZombie(zombie) then
+            continue
+        end
+        
+        -- Determine which part to aim at based on version
+        local targetPartName = aimPartName
+        
+        if zombie:IsA("Model") and zombie:FindFirstChild(targetPartName) then
             -- Version-specific filtering
             if currentVersion == "OnlySniper" and not isSniperZombie(zombie) then
                 continue
-            elseif currentVersion == "IgnoreWraith" and isWraithZombie(zombie) then
+            elseif currentVersion == "IgnoreWraith" and (isWraithZombie(zombie) or isDrenchZombie(zombie)) then
                 continue
             elseif currentVersion == "SmartSpecialKilling" and isBossZombie(zombie) and shouldIgnoreBoss(zombie) then
                 continue
+            elseif currentVersion == "DestroyersOnly" and not isDestroyerZombie(zombie) then
+                continue
+            elseif currentVersion == "AnnihilatorOnly" and not isAnnihilatorZombie(zombie) then
+                continue
             end
             
-            local part = zombie[aimPartName]
+            local part = zombie[targetPartName]
             local screenPos, onScreen = camera:WorldToScreenPoint(part.Position)
+            
             if onScreen then
                 local dist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
-                local visible = true
-                if wallCheckEnabled then
-                    visible = isVisible(part)
-                end
-                if dist < closestDist and visible then
-                    closestDist = dist
-                    closestZombie = zombie
+                
+                -- Only check visibility if within FOV
+                if dist < closestDist then
+                    local visible = true
+                    if wallCheckEnabled then
+                        visible = isVisible(part)
+                    end
+                    
+                    if visible then
+                        closestDist = dist
+                        closestZombie = zombie
+                    end
                 end
             end
         end
     end
 
-    -- Second pass for Smart Special Killing: Check for GuardianZombies near the closest zombie
-    if currentVersion == "SmartSpecialKilling" and closestZombie then
+    -- Second pass for Smart Special Killing: Check for GuardianZombies near Hunter zombies
+    if currentVersion == "SmartSpecialKilling" and closestZombie and isHunterZombie(closestZombie) then
         local closestZombiePos = closestZombie:FindFirstChild(aimPartName).Position
         local guardianZombie = nil
         local guardianDistance = math.huge
         
         for _, zombie in ipairs(zombiesFolder:GetChildren()) do
+            -- Skip SwampGiant zombies
+            if isSwampGiantZombie(zombie) then
+                continue
+            end
+            
             if zombie:IsA("Model") and isGuardianZombie(zombie) and zombie:FindFirstChild(aimPartName) then
                 local part = zombie[aimPartName]
                 local screenPos, onScreen = camera:WorldToScreenPoint(part.Position)
@@ -799,9 +1044,14 @@ local function getClosestZombieInFOV()
                     local dist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
                     local worldDistance = (part.Position - closestZombiePos).Magnitude
                     
-                    -- Check if this GuardianZombie is within priority range of the closest zombie
+                    -- Check if this GuardianZombie is within 20 studs of the Hunter
                     if worldDistance <= GUARDIAN_PRIORITY_RANGE and dist <= aimFOV then
-                        if worldDistance < guardianDistance then
+                        local visible = true
+                        if wallCheckEnabled then
+                            visible = isVisible(part)
+                        end
+                        
+                        if visible and worldDistance < guardianDistance then
                             guardianDistance = worldDistance
                             guardianZombie = zombie
                         end
@@ -810,19 +1060,24 @@ local function getClosestZombieInFOV()
             end
         end
         
-        -- If we found a GuardianZombie near the closest zombie, prioritize it
+        -- If we found a GuardianZombie near the Hunter, prioritize it
         if guardianZombie then
             return guardianZombie
         end
     end
-    
+
     return closestZombie
 end
 
 ----------------------------------------------------------------
--- HITBOX EXPANDER FUNCTIONS (UPDATED FOR SNIPER ZOMBIES - 4x4x4)
+-- HITBOX EXPANDER FUNCTIONS (UPDATED FOR PRINTING MODE + SWAMPGIANT + SNIPERZOMBIE + BRIGHTER VISUALS)
 ----------------------------------------------------------------
 local function expandHeadHitbox(zombie)
+    -- Skip SwampGiant zombies entirely for hitbox expansion
+    if isSwampGiantZombie(zombie) then
+        return
+    end
+    
     if zombie:IsA("Model") and zombie:FindFirstChild("Head") then
         local head = zombie.Head
         if head:IsA("BasePart") then
@@ -833,16 +1088,54 @@ local function expandHeadHitbox(zombie)
                 originalSize.Parent = head
             end
             
-            -- Make hitbox 4x4x4 for sniper zombies
-            if isSniperZombie(zombie) then
-                head.Size = Vector3.new(4, 4, 4) -- 4x4x4 hitbox for sniper zombies
+            -- Make hitbox 3x3x3 for SniperZombie, 4x4x4 for other sniper zombies, 5x5x5 for normal zombies
+            if zombie.Name == "SniperZombie" then
+                head.Size = Vector3.new(3, 3, 3) -- 3x3x3 hitbox for SniperZombie specifically
+            elseif isSniperZombie(zombie) then
+                head.Size = Vector3.new(4, 4, 4) -- 4x4x4 hitbox for other sniper zombies
             else
                 head.Size = Vector3.new(5, 5, 5) -- Normal hitbox for other zombies
             end
             
-            head.Transparency = 0.5
+            -- Brighter hitbox visualization
+            head.Transparency = 0.3  -- Reduced from 0.5 to make it brighter
             head.CanCollide = false
-            head.Material = Enum.Material.ForceField
+            head.Material = Enum.Material.Neon  -- Changed to Neon for brighter appearance
+            head.Color = Color3.fromRGB(255, 255, 0)  -- Bright yellow color for hitboxes
+        end
+    end
+end
+
+local function expandTorsoHitbox(zombie)
+    -- Skip SwampGiant zombies entirely for hitbox expansion
+    if isSwampGiantZombie(zombie) then
+        return
+    end
+    
+    if zombie:IsA("Model") and zombie:FindFirstChild("HumanoidRootPart") then
+        local torso = zombie.HumanoidRootPart
+        if torso:IsA("BasePart") then
+            if not torso:FindFirstChild("OriginalSize") then
+                local originalSize = Instance.new("Vector3Value")
+                originalSize.Name = "OriginalSize"
+                originalSize.Value = torso.Size
+                originalSize.Parent = torso
+            end
+            
+            -- Make hitbox 3x3x3 for SniperZombie, 4x4x4 for other sniper zombies, 5x5x5 for normal zombies
+            if zombie.Name == "SniperZombie" then
+                torso.Size = Vector3.new(3, 3, 3) -- 3x3x3 hitbox for SniperZombie specifically
+            elseif isSniperZombie(zombie) then
+                torso.Size = Vector3.new(4, 4, 4) -- 4x4x4 hitbox for other sniper zombies
+            else
+                torso.Size = Vector3.new(5, 5, 5) -- Normal hitbox for other zombies
+            end
+            
+            -- Brighter hitbox visualization
+            torso.Transparency = 0.3  -- Reduced from 0.5 to make it brighter
+            torso.CanCollide = false
+            torso.Material = Enum.Material.Neon  -- Changed to Neon for brighter appearance
+            torso.Color = Color3.fromRGB(255, 255, 0)  -- Bright yellow color for hitboxes
         end
     end
 end
@@ -867,12 +1160,45 @@ local function resetHeadHitbox(zombie)
     end
 end
 
+local function resetTorsoHitbox(zombie)
+    if zombie:IsA("Model") and zombie:FindFirstChild("HumanoidRootPart") then
+        local torso = zombie.HumanoidRootPart
+        if torso:IsA("BasePart") then
+            if torso:FindFirstChild("OriginalSize") then
+                torso.Size = torso.OriginalSize.Value
+                torso.Transparency = 0
+                torso.CanCollide = true
+                torso.Material = Enum.Material.Plastic
+                torso.OriginalSize:Destroy()
+            else
+                torso.Size = Vector3.new(2, 2, 1)
+                torso.Transparency = 0
+                torso.CanCollide = true
+                torso.Material = Enum.Material.Plastic
+            end
+        end
+    end
+end
+
 local function updateAllZombies()
     for _, zombie in ipairs(zombiesFolder:GetChildren()) do
         if hitboxEnabled then
-            expandHeadHitbox(zombie)
-        else
+            -- Reset both hitboxes first
             resetHeadHitbox(zombie)
+            resetTorsoHitbox(zombie)
+            
+            -- Then expand the appropriate one based on version (but skip SwampGiant)
+            if not isSwampGiantZombie(zombie) then
+                if currentVersion == "PrintingMode" then
+                    expandTorsoHitbox(zombie)
+                else
+                    expandHeadHitbox(zombie)
+                end
+            end
+        else
+            -- Reset both hitboxes if hitbox is disabled
+            resetHeadHitbox(zombie)
+            resetTorsoHitbox(zombie)
         end
     end
 end
@@ -888,7 +1214,18 @@ end)
 zombiesFolder.ChildAdded:Connect(function(zombie)
     task.wait(0.2)
     if hitboxEnabled then
-        expandHeadHitbox(zombie)
+        -- Reset both hitboxes first
+        resetHeadHitbox(zombie)
+        resetTorsoHitbox(zombie)
+        
+        -- Then expand the appropriate one based on version (but skip SwampGiant)
+        if not isSwampGiantZombie(zombie) then
+            if currentVersion == "PrintingMode" then
+                expandTorsoHitbox(zombie)
+            else
+                expandHeadHitbox(zombie)
+            end
+        end
     end
 end)
 
@@ -909,7 +1246,7 @@ RunService.RenderStepped:Connect(function()
     fovCircle.Position = camera.ViewportSize / 2
     fovCircle.Radius = aimFOV
     fovCircle.Visible = fovVisible
-    
+
     -- Clean up boss timers
     if currentVersion == "SmartSpecialKilling" then
         cleanupBossTimers()
@@ -923,7 +1260,7 @@ RunService.RenderStepped:Connect(function()
             
             -- Aim slightly higher for sniper zombies
             if isSniperZombie(closestZombie) then
-                targetPosition = targetPosition + Vector3.new(0, 0.5, 0) -- Aim higher for sniper zombies
+                targetPosition = targetPosition + Vector3.new(0, 0.25, 0) -- Aim higher for sniper zombies
             end
             
             smoothAim(targetPosition)
