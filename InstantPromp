@@ -1,0 +1,87 @@
+-- Advanced Instant Interact with UI
+if not game:IsLoaded() then game.Loaded:Wait() end
+
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+-- Settings (you can change these)
+local settings = {
+    InstantHold = true, -- Set hold duration to 0
+    AutoTrigger = false, -- Auto-click when in range
+    IncreaseRange = true, -- Increase activation distance
+    NoLOS = true, -- No line of sight required
+    Keybind = Enum.KeyCode.E -- Change to your preferred key
+}
+
+-- Create notification
+local function notify(msg)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Instant Interact",
+        Text = msg,
+        Duration = 3
+    })
+end
+
+-- Main function
+local function setupInstantPrompts()
+    -- Process existing prompts
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            if settings.InstantHold then obj.HoldDuration = 0 end
+            if settings.IncreaseRange then obj.MaxActivationDistance = 50 end
+            if settings.NoLOS then obj.RequiresLineOfSight = false end
+            obj.ClickablePrompt = true
+        end
+    end
+    
+    -- Process new prompts
+    workspace.DescendantAdded:Connect(function(obj)
+        if obj:IsA("ProximityPrompt") then
+            if settings.InstantHold then obj.HoldDuration = 0 end
+            if settings.IncreaseRange then obj.MaxActivationDistance = 50 end
+            if settings.NoLOS then obj.RequiresLineOfSight = false end
+            obj.ClickablePrompt = true
+        end
+    end)
+    
+    -- Instant trigger
+    ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt)
+        fireproximityprompt(prompt)
+    end)
+    
+    -- Auto-trigger (if enabled)
+    if settings.AutoTrigger then
+        ProximityPromptService.PromptShown:Connect(function(prompt)
+            task.wait(0.1)
+            fireproximityprompt(prompt)
+        end)
+    end
+    
+    -- Keybind to trigger all nearby prompts
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if not gameProcessed and input.KeyCode == settings.Keybind then
+            -- Fire all prompts within range
+            for _, prompt in pairs(workspace:GetDescendants()) do
+                if prompt:IsA("ProximityPrompt") and prompt.Enabled then
+                    fireproximityprompt(prompt)
+                end
+            end
+        end
+    end)
+end
+
+-- Execute
+setupInstantPrompts()
+notify("Instant Interact Activated!\nHold Duration: 0\nRange: Increased\nAuto-trigger: " .. tostring(settings.AutoTrigger))
+
+print([[
+
+╔══════════════════════════════╗
+║  INSTANT INTERACT LOADED     ║
+║  • All prompts are instant   ║
+║  • No hold required          ║
+║  • Works on everything       ║
+╚══════════════════════════════╝
+]])
